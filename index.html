@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>WebSocket demo</title>
+        <style type="text/css">
+            
+            body {
+                background-color: lightseagreen;
+            }
+
+            #main {
+                display: grid;
+
+                grid-template-columns: repeat(5, 1fr);
+                grid-template-rows: repeat(5, 1fr);
+
+                background-color: lightblue;
+
+                height: 97vh;
+
+            }
+            .box {
+                background-color: lightgreen;
+                padding: 5px;
+            }
+            #messages_out {
+                grid-area: 2 / 1 / 5 / 1;
+                overflow-y: auto;
+            }
+            #user_op {
+                background: lightsteelblue;
+            }
+
+            @counter-style mess {
+                system: cyclic;
+                symbols: "|";
+                suffix: " ";
+            }
+
+            #messlist {
+                list-style-type: mess;
+                
+            }
+            #connStat {
+                color: red;
+            }
+
+        </style>
+    </head>
+    <body>
+
+        <div id="main">
+            
+            <div class="box" id="user_op">
+                <button id="notif_perm" onclick="notifget()">Allow notifications?</button>
+                <!--<div id="nameBox">-->
+                    <p id="you-name-cont">Name: <span id="you-name"></span> <input id="name-in" type="text">  <button onclick="updateName()">Name</button> </p>
+                    <p>Pass: <input id="pass-in" type="text">  <button onclick="login()">Login</button> </p>
+                <!--</div>-->
+                <input type="text" id="text-sub"> <button onclick="submitText()">Submit</button>
+                <p>Active Users: <span id="active_users"></span></p>
+                <p>Users Logged In: <span id="logged_users_c"></span></p>
+                <h3 id="connStat"> --Not Connected-- </h3>
+            </div>
+
+            <!--<p id="messout"></p>-->
+            <div id="messages_out" class='box'>
+                <h1>Messages:</h1>
+                <ul id="messlist">
+
+                </ul>
+            </div>
+
+
+
+        </div>
+
+
+        
+
+        <script>
+            /*service workers*/
+            
+
+            let text = document.getElementById("text-sub");
+            let active_users_p = document.getElementById("active_users");
+            let logged_in_users_p = document.getElementById("logged_users_c")
+            let messlist = document.getElementById("messlist");
+            let name_field = document.getElementById("name-in");
+            let pass_in = document.getElementById("pass-in");
+            let connStat = document.getElementById("connStat");
+
+
+            var websocket = new WebSocket("wss://lillplp.com:6789/");
+
+
+            function notifget() {
+                Notification.requestPermission()                   
+            }
+
+            
+              
+            websocket.onopen = function (event) {
+                //websocket.send(JSON.stringify({action: "connect", name: name_field.value}));
+                connStat.style.color = "green";
+                connStat.textContent = "--Connected--";
+            }
+
+            websocket.onclose = function (event) {
+                connStat.style.color = "red";
+                connStat.textContent = "--Not Connected--";
+            }
+
+            websocket.onerror = function (event) {
+                connStat.style.color = "red";
+                connStat.textContent = "--Not Connected--";
+            }
+
+
+
+            function submitText() {
+                websocket.send(JSON.stringify({action: "mess", message: text.value}));
+                text.value = "";
+            }
+
+            function login() {
+                let dat_tbs = JSON.stringify({
+                    action: "user",
+                    subact: "login",
+                    name: name_field.value,
+                    pass: pass_in.value
+                })
+                websocket.send(dat_tbs)
+            }
+
+
+            function updateName() {
+                websocket.send(JSON.stringify({action: "user", subact: "update", type: "name", data: name_field.value}))
+            }
+
+            function messHandle(data) {
+                messlist.insertAdjacentHTML("beforeend", "<li> " + data["messobj"]["auth_name"] + ": " + data["messobj"]["message"] + " </li>");
+            }
+
+            function notifHandle(title) {
+                if (Notification.permission === "granted") {
+                    notif = new Notification("lillplp.com Message");
+                }
+            }
+
+
+
+
+            websocket.onmessage = function (event) {
+
+
+
+
+
+                data = JSON.parse(event.data);
+                console.log(data)
+
+                //document.getElementById("messlist").insertAdjacentHTML("beforeend", "<li> " + value.message + " </li>");
+
+                switch (data.type) {
+                    case "mess_all":
+                        //data.data
+                        for (let x in data.data) {
+                            messHandle(data.data[x])
+                        };
+                        break;
+                    case "users":
+                        active_users_p.innerHTML = data.cCount;
+                        logged_in_users_p.innerHTML = data.uCount;
+                        break;
+
+                    case "mess":
+                        messHandle(data.data)
+                        notifHandle("lillplp.com Message")
+
+
+
+                        break;
+                }
+
+            };
+
+
+            /*
+            switch (data.type) {
+                case 'state':
+                    value.textContent = data.value;
+                    break;
+                case 'users':
+                    users.textContent = (
+                        data.count.toString() + " user" +
+                        (data.count == 1 ? "" : "s"));
+                    break;
+                default:
+                    console.error(
+                        "unsupported event", data);
+            }*/
+
+            
+
+        
+
+
+
+
+
+
+
+        </script>
+    </body>
+</html>

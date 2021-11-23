@@ -48,8 +48,6 @@ class usr:
             return None
     
 
-
-
 class msg:
     """
     Message Container Class, Defines a message
@@ -72,4 +70,16 @@ class msg:
             return temp
         except AttributeError as e:
             return None
+
+
+
+class channel:
+
+    def __init__(self, ident) -> None:
+        self.ident = ident
+        self.messages = set()
+
     
+    def message_push(self, mess : msg):
+        self.messages.add(mess)
+

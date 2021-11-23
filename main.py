@@ -6,6 +6,9 @@ import random as rand
 import db
 from classDefs import *
 import jsonpickle
+import ssl
+import pathlib
+import html
 
 
 logging.basicConfig()
@@ -150,7 +153,7 @@ async def main(websocket, path):
                         #user.name(data["data"])
             
             elif data["action"] == "mess":
-                message = msg(conn.user, data["message"], rand_id())
+                message = msg(conn.user, html.escape(data["message"]), rand_id())
                 #RELAY.add(message)
                 RELAY.append(message)
                 await notify_state()
@@ -166,7 +169,15 @@ async def main(websocket, path):
         await unregister(conn)
 
 
-start_server = websockets.serve(main, "localhost", 6789)
+
+
+ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+localhost_pem = pathlib.Path(__file__).with_name("localhost.pem")
+ssl_context.load_cert_chain(localhost_pem)
+
+
+
+start_server = websockets.serve(main, "", 6789, ssl=ssl_context)
 
 asyncio.get_event_loop().run_until_complete(start_server)
 asyncio.get_event_loop().run_forever()

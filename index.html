@@ -46,6 +46,10 @@
             }
 
         </style>
+        <script
+        src="https://code.jquery.com/jquery-3.6.0.min.js"
+        integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4="
+        crossorigin="anonymous"></script>
     </head>
     <body>
 
@@ -66,6 +70,7 @@
             <!--<p id="messout"></p>-->
             <div id="messages_out" class='box'>
                 <h1>Messages:</h1>
+                <h3 id="curr_view"></h3>
                 <ul id="messlist">
 
                 </ul>
@@ -73,7 +78,7 @@
 
 
             <div id="channels">
-                <ul id="channlist">
+                <ul id="chanlist">
 
                 </ul>
             </div>
@@ -89,7 +94,12 @@
             /*service workers*/
             //Help
             
+            // Ess Vars
+            let view = {channel_ident: 0};
+            let channels = [];
 
+
+            // Bulk Vars
             let text = document.getElementById("text-sub");
             let active_users_p = document.getElementById("active_users");
             let logged_in_users_p = document.getElementById("logged_users_c")
@@ -98,6 +108,9 @@
             let pass_in = document.getElementById("pass-in");
             let connStat = document.getElementById("connStat");
             let channlist = document.getElementById("channlist")
+            // Bulk Vars ^
+
+
 
 
             var websocket = new WebSocket("wss://lillplp.com:6789/");
@@ -121,10 +134,83 @@
             }
 
             websocket.onerror = function (event) {
-                connStat.style.color = "red";
-                connStat.textContent = "--Not Connected--";
+                connStat.style.color = "orange";
+                connStat.textContent = "--Error--";
+            }
+            
+            websocket.onmessage = function (event) {
+                data = JSON.parse(event.data);
+                console.log(data)
+
+                //document.getElementById("messlist").insertAdjacentHTML("beforeend", "<li> " + value.message + " </li>");
+
+                switch (data.type) {
+                    case "mess_all":
+                        //data.data
+                        for (let x in data.data) {
+                            messHandle(data.data[x])
+                        };
+                        break;
+                    case "users":
+                        active_users_p.innerHTML = data.cCount;
+                        logged_in_users_p.innerHTML = data.uCount;
+                        break;
+
+                    case "mess":
+                        messHandle(data.data)
+
+                        //notifHandle("lillplp.com Message")
+
+                        break;
+                    case "chan_burst":
+
+                        //$("#chanlist").append();
+
+                        for(i = 0; i < data.data.length; i++){
+                            $("#chanlist").append("<li> <button id='channel_ " + data.data[i].ident + "' onclick='changeChannel(" + data.data[i].ident + ")'>" + data.data[i].name + "</button> </li>");
+                        }
+                        channels = data.data;
+                        changeChannel(0);
+
+                        //$("#chanlist").html(JSON.stringify(data.data));
+                        
+                        break;
+                }
+
+            };
+
+
+
+
+            function changeChannel(channel_ident) {
+                channel_ident = Number(channel_ident);
+                view.channel_ident = channel_ident;
+                let chName = channels.find(element => element.ident === channel_ident);
+                $("#curr_view").html(chName.name);
+
+
+                let HTMLArr = [];
+                let chanMess = chName.messages
+                for(i = 0; i < chanMess.length; i++){
+                    
+                    HTMLArr.push("<li>"  + chanMess[i].author.name + ": " + chanMess[i].content + " </li>");
+                }
+
+                let newHTML = HTMLArr.join("");
+                $("#messlist").html(newHTML)
+                
+                websocket.send(JSON.stringify({action: "cViewChange", channel: channel_ident}));
+
+
+
+                //channels.find(element => element.ident === 0)
+
             }
 
+
+            function apiCall(command) {
+                
+            }
 
 
             function submitText() {
@@ -148,110 +234,30 @@
             }
 
             function messHandle(data) {
-		//datum = JSON.parse(data["messobj"])
-		datum = data.messobj
-                /*
-                color_bg = datum.message_id
-                color_fg_arr = Array(datum.message_id)
-                color_fg_arr_join = []
-                for(i = 0; i < color_fg_arr.length; i++){
-                    temp = color_fg_arr[i] + color_fg_arr[i]
+		        let datum = data
 
-                    if(temp > 9) {
-                        switch (temp) {
-                        case 10:
-                            temp = "A"
-                            break;
-                        case 11:
-                            temp = "B"
-                            break;
-                        case 12:
-                            temp = "C"
-                            break;
-                        case 13: 
-                            temp = "D"
-                            break;
-                        case 14: 
-                            temp = "E"
-                            break;
-                        case 15: 
-                            temp = "F"
-                            break;
-                        default:
-                            temp = "F"
-                            break;
-                        }
-                    }
-                    color_fg_arr_join.push(temp)
+                channels.find(element => element.ident === datum.chan.ident).messages.push(datum);
+
+                if(view["channel_ident"] === datum.chan.ident){
+                    messlist.insertAdjacentHTML("beforeend", "<li>"  + datum.author.name + ": "  + datum.content + " </li>");
                 }
+                
 
-                color_fg = color_fg_arr_join.join('');
-                */
-
-                // Set <li style='background: #0" + datum.message_id + "'>" to <li style='background: #0" + datum.channel.ident + "'>"
-                //style='background: #0" + color_bg + ";color:#0" + color_fg + " '
-                messlist.insertAdjacentHTML("beforeend", "<li>"  + datum.auth_name + " | " + datum.channel.name +": "  + datum.message + " </li>");
+                //changeChannel(view,channel_ident);
+                notifHandle(datum.content + " In " + datum.chan.name + " By " + datum.author.name);
+                
+                
 		
             }
 
             function notifHandle(title) {
                 if (Notification.permission === "granted") {
-                    notif = new Notification("lillplp.com Message");
+                    //notif = new Notification("lillplp.com Message");
+                    notif = new Notification(title);
                 }
             }
 
 
-
-
-            websocket.onmessage = function (event) {
-
-
-
-
-
-                data = JSON.parse(event.data);
-                console.log(data)
-
-                //document.getElementById("messlist").insertAdjacentHTML("beforeend", "<li> " + value.message + " </li>");
-
-                switch (data.type) {
-                    case "mess_all":
-                        //data.data
-                        for (let x in data.data) {
-                            messHandle(data.data[x])
-                        };
-                        break;
-                    case "users":
-                        active_users_p.innerHTML = data.cCount;
-                        logged_in_users_p.innerHTML = data.uCount;
-                        break;
-
-                    case "mess":
-                        messHandle(data.data)
-                        notifHandle("lillplp.com Message")
-                        break;
-                    case "chann":
-                        
-                        break;
-                }
-
-            };
-
-
-            /*
-            switch (data.type) {
-                case 'state':
-                    value.textContent = data.value;
-                    break;
-                case 'users':
-                    users.textContent = (
-                        data.count.toString() + " user" +
-                        (data.count == 1 ? "" : "s"));
-                    break;
-                default:
-                    console.error(
-                        "unsupported event", data);
-            }*/
 
             
 

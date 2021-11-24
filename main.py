@@ -1,18 +1,22 @@
 #Lilly PLP
 #Nov 23 2021
 
+
 import asyncio
 import json
 import logging
 import websockets
 import random as rand
-import db
-from classDefs import *
+from http import HTTPStatus as httpCode
 import jsonpickle
 import ssl
 import pathlib
 import html
+import string
 
+# Me libs
+import db
+from classDefs import *
 
 logging.basicConfig()
 
@@ -32,7 +36,6 @@ mainChannel = channel(0, "main")
 nullUser = usr(0, "Null")
 
 
-
 CHANNELS.append(mainChannel)
 
 
@@ -46,12 +49,29 @@ def rand_id():
     return int("".join(ident))
 
 
+def rand_chars(howmany : int):
+    charsStr = string.ascii_letters
+    chars = []
+    for c in charsStr:
+        chars.append(c)
+
+    temp = []
+    for num in range(howmany):
+        temp.append(chars[rand.randint(0,len(chars) - 1)])
+    return temp
+
+
+for x in range(10):
+    CHANNELS.append(channel(rand_id(), str(x)))
+
+
+
 
 # Begin Active Funcs
 
 def state_event():
     sub = RELAY[-1]
-
+    
     temp = {
                 "messobj" : {
                     "message" : sub.content,
@@ -62,7 +82,8 @@ def state_event():
                 }
     }
 
-    return json.dumps({"type": "mess", "data" : temp })
+    return json.dumps({"type": "mess", "data" : json.loads(jsonpickle.encode(sub, unpicklable=False)) })
+    #return json.dumps({"type": "mess", "data" : temp })
 
 
 def whole_event():
@@ -80,7 +101,7 @@ def whole_event():
                 }
             }
         )
-
+    
     return json.dumps({"type": "mess_all", "data" : temp})
     #return json.dumps({"type": "state", **STATE})
 
@@ -90,10 +111,20 @@ def users_event():
         print(jsonpickle.encode(list(USERS)[0]))
     return json.dumps({"type": "users", "uCount": len(USERS), "cCount": len(CONNS)})
 
+
+def channel_event():
+    
+    #jsonpickle.encode(CHANNELS, unpicklable=False)
+    return json.dumps({"type": "chan_burst", "data": json.loads(jsonpickle.encode(CHANNELS, unpicklable=False)) })
+
+
+
+
 async def update(datum):
     if CONNS:
         for conn in CONNS:
             await conn.send(datum)
+
 
 async def notify_state():
     if CONNS:  # asyncio.wait doesn't accept an empty list
@@ -138,6 +169,10 @@ def user_db_update(user, column, value):
     rows = DataConn.select("UPDATE messages.users SET name = %s WHERE ident = '%s';", (value, user.ident))
 
 
+
+
+
+
 async def main(websocket, path):
     # register(websocket) sends user_event() to websocket
     #user = usr(0)
@@ -145,16 +180,18 @@ async def main(websocket, path):
 
     conn = conn_obj(websocket, nullUser, {"channel": mainChannel})
     await register(conn)
+    
 
     try:
-        await websocket.send(whole_event())
+        #await websocket.send(whole_event())
+        await websocket.send(channel_event())
         async for message in websocket:
             data = json.loads(message)
 
 
             if data["action"] == "connect":
                 pass
-
+            
             elif data["action"] == "user":
                 if data["subact"] == "login":
                     await user_login(conn, data["name"], data["pass"])
@@ -167,27 +204,36 @@ async def main(websocket, path):
                         conn.user.name = data["data"]
                         user_db_update(conn.user, "name", data["data"])
                         #user.name(data["data"])
+            
 
+            elif data["action"] == "cViewChange":
+                try:
+                    temp_c_id_change = int(data["channel"])
+
+                    for Tchan in CHANNELS:
+                        if Tchan.ident == temp_c_id_change:
+                            conn.view = {"channel": Tchan}
+                            break
+                    else:
+                        await conn.send(json.dumps({"type": "error", "code": httpCode.NOT_ACCEPTABLE}))
+
+
+                except ValueError as e:
+                    await conn.send(json.dumps({"type": "error", "code": httpCode.BAD_REQUEST}))
+            
             elif data["action"] == "mess":
 
 
                 conn.view["channel"].message_push(conn.user, html.escape(data["message"]), rand_id())
                 RELAY.append(conn.view["channel"].messages[-1])
 
-                #message = msg(conn.user, html.escape(data["message"]), rand_id())
-                #mainChannel.message_push(conn.user, html.escape(data["message"]), rand_id())
 
-                #for m in mainChannel.messages:
-                #    print(jsonpickle.encode(m))
-                #
-
-                #print(mainChannel.messages)
-                #RELAY.add(message)
-                #RELAY.append(message)
                 await notify_state()
             else:
+                await conn.send(json.dumps({"type": "error", "code": httpCode.BAD_REQUEST}))
                 #write error codes
-                await websocket.send(json.dumps({"type": "error", "code": "001", "text": "action not defined"}))
+
+                #await websocket.send(json.dumps({"type": "error", "code": "001", "text": "action not defined"}))
 
 
 

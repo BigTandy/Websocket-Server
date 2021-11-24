@@ -26,26 +26,14 @@ class conn_obj:
 class usr:
     """
     Usr class holds info about users who are actively connected
-
-    :param websocket: Websocket obj, pass None if no connection attached
-    :param ident: This is the identifying number for the class, give 0 if user is not in DB
     """
 
     def __init__(self, ident, name):
-
         self.name = name
-        #self.ident_ = rand_id()
         self.ident = ident
+        self.authToken = None
+        self.perms = None
 
-#class msg:
-#    """
-#    Message Container Class, Defines a message
-#    """
-#    def __init__(self, author, message, ident) -> None:
-#        self.content = message
-#        self.author = author #Pass whole User instence
-#        self.ident = ident
-#        #self.channel
 
 
 class channel:

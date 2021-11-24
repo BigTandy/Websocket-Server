@@ -72,6 +72,13 @@
             </div>
 
 
+            <div id="channels">
+                <ul id="channlist">
+
+                </ul>
+            </div>
+
+
 
         </div>
 
@@ -80,6 +87,7 @@
 
         <script>
             /*service workers*/
+            //Help
             
 
             let text = document.getElementById("text-sub");
@@ -89,6 +97,7 @@
             let name_field = document.getElementById("name-in");
             let pass_in = document.getElementById("pass-in");
             let connStat = document.getElementById("connStat");
+            let channlist = document.getElementById("channlist")
 
 
             var websocket = new WebSocket("wss://lillplp.com:6789/");
@@ -139,7 +148,50 @@
             }
 
             function messHandle(data) {
-                messlist.insertAdjacentHTML("beforeend", "<li> " + data["messobj"]["auth_name"] + ": " + data["messobj"]["message"] + " </li>");
+		//datum = JSON.parse(data["messobj"])
+		datum = data.messobj
+                /*
+                color_bg = datum.message_id
+                color_fg_arr = Array(datum.message_id)
+                color_fg_arr_join = []
+                for(i = 0; i < color_fg_arr.length; i++){
+                    temp = color_fg_arr[i] + color_fg_arr[i]
+
+                    if(temp > 9) {
+                        switch (temp) {
+                        case 10:
+                            temp = "A"
+                            break;
+                        case 11:
+                            temp = "B"
+                            break;
+                        case 12:
+                            temp = "C"
+                            break;
+                        case 13: 
+                            temp = "D"
+                            break;
+                        case 14: 
+                            temp = "E"
+                            break;
+                        case 15: 
+                            temp = "F"
+                            break;
+                        default:
+                            temp = "F"
+                            break;
+                        }
+                    }
+                    color_fg_arr_join.push(temp)
+                }
+
+                color_fg = color_fg_arr_join.join('');
+                */
+
+                // Set <li style='background: #0" + datum.message_id + "'>" to <li style='background: #0" + datum.channel.ident + "'>"
+                //style='background: #0" + color_bg + ";color:#0" + color_fg + " '
+                messlist.insertAdjacentHTML("beforeend", "<li>"  + datum.auth_name + " | " + datum.channel.name +": "  + datum.message + " </li>");
+		
             }
 
             function notifHandle(title) {
@@ -177,9 +229,9 @@
                     case "mess":
                         messHandle(data.data)
                         notifHandle("lillplp.com Message")
-
-
-
+                        break;
+                    case "chann":
+                        
                         break;
                 }
 

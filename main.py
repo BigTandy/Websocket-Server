@@ -17,10 +17,20 @@ logging.basicConfig()
 
 #RELAY = set()
 RELAY = []
+
+CHANNELS = []
 USERS = set()
 CONNS = set()
 
+
+
+#setup defaults
+mainChannel = channel(0, "main")
 nullUser = usr(0, "Null")
+
+
+
+CHANNELS.append(mainChannel)
 
 
 DataConn = db.dataBase()
@@ -38,17 +48,19 @@ def rand_id():
 
 def state_event():
     sub = RELAY[-1]
-
+    
     temp = {
                 "messobj" : {
                     "message" : sub.content,
                     "message_id" : sub.ident,
                     "auth_id" : sub.author.ident,
-                    "auth_name" : sub.author.name
+                    "auth_name" : sub.author.name,
+                    "channel" : json.loads(jsonpickle.encode(sub.chan, unpicklable=False))
                 }
     }
 
-    return json.dumps({"type": "mess", "data" : temp})
+    return json.dumps({"type": "mess", "data" : temp })
+
 
 def whole_event():
     temp = []
@@ -60,7 +72,8 @@ def whole_event():
                     "message" : sub.content,
                     "message_id" : sub.ident,
                     "auth_id" : sub.author.ident,
-                    "auth_name" : sub.author.name
+                    "auth_name" : sub.author.name,
+                    "channel" : json.loads(jsonpickle.encode(sub.chan, unpicklable=False))
                 }
             }
         )
@@ -127,7 +140,7 @@ async def main(websocket, path):
     #user = usr(0)
     #await register(user)
 
-    conn = conn_obj(websocket, nullUser)
+    conn = conn_obj(websocket, nullUser, {"channel": mainChannel})
     await register(conn)
 
     try:
@@ -153,9 +166,21 @@ async def main(websocket, path):
                         #user.name(data["data"])
             
             elif data["action"] == "mess":
-                message = msg(conn.user, html.escape(data["message"]), rand_id())
+
+
+                conn.view["channel"].message_push(conn.user, html.escape(data["message"]), rand_id())
+                RELAY.append(conn.view["channel"].messages[-1])
+
+                #message = msg(conn.user, html.escape(data["message"]), rand_id())
+                #mainChannel.message_push(conn.user, html.escape(data["message"]), rand_id())
+
+                #for m in mainChannel.messages:
+                #    print(jsonpickle.encode(m))
+                #
+
+                #print(mainChannel.messages)
                 #RELAY.add(message)
-                RELAY.append(message)
+                #RELAY.append(message)
                 await notify_state()
             else:
                 #write error codes

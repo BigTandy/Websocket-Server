@@ -8,7 +8,7 @@ class dataBase:
 
     
     def select(self, query, values) -> list:
-        db = mysql.connector.connect(user='python', password='Cheese', host='127.0.0.1', database='messages')
+        db = mysql.connector.connect(user='python', password='', host='127.0.0.1', database='messages')
         cursor = db.cursor(dictionary=True, buffered=True)
 
         cursor.execute(query, values) # %s for item to be replaced in querry
@@ -23,7 +23,7 @@ class dataBase:
 
 
     def insert(self, query, values):
-        db = mysql.connector.connect(user='python', password='Cheese', host='127.0.0.1', database='messages')
+        db = mysql.connector.connect(user='python', password='', host='127.0.0.1', database='messages')
         cursor = db.cursor()
 
         cursor.execute(query, values) # %s for item to be replaced in querry

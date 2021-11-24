@@ -1,3 +1,6 @@
+#Lilly PLP
+#Nov 23 2021
+
 import asyncio
 import json
 import logging
@@ -48,7 +51,7 @@ def rand_id():
 
 def state_event():
     sub = RELAY[-1]
-    
+
     temp = {
                 "messobj" : {
                     "message" : sub.content,
@@ -77,7 +80,7 @@ def whole_event():
                 }
             }
         )
-    
+
     return json.dumps({"type": "mess_all", "data" : temp})
     #return json.dumps({"type": "state", **STATE})
 
@@ -151,7 +154,7 @@ async def main(websocket, path):
 
             if data["action"] == "connect":
                 pass
-            
+
             elif data["action"] == "user":
                 if data["subact"] == "login":
                     await user_login(conn, data["name"], data["pass"])
@@ -164,7 +167,7 @@ async def main(websocket, path):
                         conn.user.name = data["data"]
                         user_db_update(conn.user, "name", data["data"])
                         #user.name(data["data"])
-            
+
             elif data["action"] == "mess":
 
 

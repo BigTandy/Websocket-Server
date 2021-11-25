@@ -1,6 +1,7 @@
 
 
 from typing import Dict
+from db import dataBase
 
 
 class conn_obj:
@@ -13,6 +14,7 @@ class conn_obj:
         self.websocket = websocket
         self.user = user
         self.view = view # {"Guild" : !Guild Obj!, "Channel" : !Channel Obj!}
+        self.requestsPerMinute = 0
     
     async def send(self, datum):
         """
@@ -28,12 +30,21 @@ class usr:
     Usr class holds info about users who are actively connected
     """
 
-    def __init__(self, ident, name):
+    def __init__(self, ident : str, name : str, delta : str):
         self.name = name
         self.ident = ident
+        self.delta = delta
         self.authToken = None
         self.perms = None
-
+    
+    def dbGet(self):
+        db = dataBase()
+        rows = db.select("SELECT * FROM mess_app.users WHERE ident = '%s';", (self.ident))
+        if rows:
+            return rows
+        else:
+            return False
+            
 
 
 class channel:

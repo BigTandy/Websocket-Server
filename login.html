@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>WebSocket demo</title>
+        <style type="text/css">
+            
+            body {
+                background-color: lightseagreen;
+            }
+
+            #main {
+                display: grid;
+
+                grid-template-columns: repeat(5, 1fr);
+                grid-template-rows: repeat(5, 1fr);
+
+                background-color: lightblue;
+
+                height: 97vh;
+
+            }
+            .box {
+                background-color: lightgreen;
+                padding: 5px;
+            }
+            #messages_out {
+                grid-area: 2 / 1 / 5 / 1;
+                overflow-y: auto;
+            }
+            #user_op {
+                background: lightsteelblue;
+            }
+
+            @counter-style mess {
+                system: cyclic;
+                symbols: "|";
+                suffix: " ";
+            }
+
+            #messlist {
+                list-style-type: mess;
+                
+            }
+            #connStat {
+                color: red;
+            }
+
+        </style>
+        <script
+        src="https://code.jquery.com/jquery-3.6.0.min.js"
+        integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4="
+        crossorigin="anonymous"></script>
+    </head>
+    <body>
+
+        <div id="main">
+            
+            <div class="box" id="user_op">
+
+
+                <p id="you-name-cont">Name: <input id="name-in" type="text"> #<input id="delta-in" type="text"> </p>
+                <p>Pass: <input id="pass-in" type="password">  <button onclick="login()">Login</button> </p>
+
+
+                
+                <h3 id="loginStat"> --Not Logged In-- </h3>
+                <h3 id="connStat"> --Not Connected-- </h3>
+            </div>
+
+
+
+
+
+        </div>
+
+
+        
+
+        <script>
+            /*service workers*/
+            //Help
+            //b
+            
+
+            var websocket = new WebSocket("wss://lillplp.com:6789/");
+
+
+
+            
+              
+            websocket.onopen = function (event) {
+                connStat.style.color = "green";
+                connStat.textContent = "--Connected--";
+            }
+
+            websocket.onclose = function (event) {
+                connStat.style.color = "red";
+                connStat.textContent = "--Not Connected--";
+            }
+
+            websocket.onerror = function (event) {
+                connStat.style.color = "orange";
+                connStat.textContent = "--Error--";
+            }
+            
+
+            websocket.onmessage = function (event) {
+                data = JSON.parse(event.data);
+                console.log(data)
+
+                switch (data.type) {
+                    case "mess_all":
+                        //data.data
+
+                        break;
+                    case "users":
+
+                        break;
+
+                    case "mess":
+
+                        break;
+                    case "chan_burst":
+
+                        break;
+                }
+
+            };
+
+
+
+
+
+            function submitText() {
+                websocket.send(JSON.stringify({action: "mess", message: text.value}));
+                text.value = "";
+            }
+
+
+            function login() {
+                let dat_tbs = JSON.stringify({
+                    action: "user",
+                    subact: "login",
+                    name: name_field.value,
+                    pass: pass_in.value
+                })
+                websocket.send(dat_tbs)
+            }
+
+
+
+
+        </script>
+    </body>
+</html>

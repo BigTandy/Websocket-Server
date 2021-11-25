@@ -13,16 +13,17 @@ import ssl
 import pathlib
 import html
 import string
+import hashlib
+import os
 
 # Me libs
 import db
 from classDefs import *
 
-logging.basicConfig()
+# Core of this code is from the websockets docs
+# https://websockets.readthedocs.io/en/stable/
 
-#STATE = {"value": 0}
 
-#RELAY = set()
 RELAY = []
 
 CHANNELS = []
@@ -33,20 +34,22 @@ CONNS = set()
 
 #setup defaults
 mainChannel = channel(0, "main")
-nullUser = usr(0, "Null")
+nullUser = usr(0, "Null", )
 
 
 CHANNELS.append(mainChannel)
 
 
 DataConn = db.dataBase()
+userDC = db.userT()
 
 
-def rand_id():
+
+def rand_id(count=5):
     ident = []
-    for spot in range(5): #was 12
+    for spot in range(count): #was 12
         ident.append(str(rand.randint(1,9)))
-    return int("".join(ident))
+    return str("".join(ident))
 
 
 def rand_chars(howmany : int):
@@ -59,6 +62,30 @@ def rand_chars(howmany : int):
     for num in range(howmany):
         temp.append(chars[rand.randint(0,len(chars) - 1)])
     return temp
+
+
+def tokenGen():
+    temp = []
+    for i in range(50):
+        temp.append(rand.choice(string.ascii_letters + string.digits))
+    return "".join(temp)
+
+
+# https://nitratine.net/blog/post/how-to-hash-passwords-in-python/
+def passHash(password, salt=None):
+    if salt is None:
+        salt = os.urandom(32)
+
+    hashed = hashlib.pbkdf2_hmac("sha256", password, salt, 100000)
+    return (hashed, salt)
+
+
+def passVer(password, salt, oldhash):
+    newHash = passHash(password, salt)[0]
+    if newHash == oldhash:
+        return True
+    else:
+        return False
 
 
 for x in range(10):
@@ -145,28 +172,60 @@ async def unregister(conn):
     await notify_users()
 
 
-
-
-def user_db_handle(user):
-    rows = DataConn.select("SELECT * FROM messages.users WHERE ident = '%s';", (user.ident))
-    print(rows)
-    if len(rows) == 0:
-        print(user)
-
-async def user_login(conn, name, pw):
-    rows = DataConn.select("SELECT * FROM messages.users WHERE name = %s AND passwd = %s;", (name, pw))
+async def user_login(conn, name, delta, pw):
+    #rows = DataConn.select("SELECT * FROM mess_app.users WHERE name = %s;", (name))
+    rows = userDC.selectNameDelta(name, delta)
     print(rows)
     if rows:
-        user = usr(rows[0]["ident"], rows[0]["name"])
-        conn.user = user
-        USERS.add(user)
-        await notify_users()
-        return user
+        if passVer(pw, rows["salt"], rows["passwd"]):
+            while True:
+                newAuth = tokenGen()
+                rows = DataConn.select("SELECT * FROM mess_app.users WHERE token = %s;", (newAuth))
+                if rows:
+                    continue
+                else:
+                    break
+
+            user = usr(rows[0]["ident"], rows[0]["name"])
+            user.authToken = newAuth
+            conn.user = user
+            USERS.add(user)
+            await notify_users()
+            return user
+        else:
+            return False
+    else:
+        return False
+
+
+async def user_reg(conn, name, pw):
+    #make ranadom delta, 4 chars
+    #Salt / Hash
+    #
+
+    allRows = userDC.selectAll()
+
+    delta = rand_id(4)
+
+    while True:
+        ident = rand_id()
+        rows = DataConn.select("SELECT * FROM `users` WHERE `ident` = %s;", (ident))
+        if rows:
+            continue
+        else:
+            break
+    
+    hashed, salt = passHash(pw)
+
+    userDC.insert(name, delta, ident, hashed, salt)
+    await user_login(conn, name, delta, pw)
+    
 
 
 
 def user_db_update(user, column, value):
-    rows = DataConn.select("UPDATE messages.users SET name = %s WHERE ident = '%s';", (value, user.ident))
+    #rows = DataConn.update("UPDATE `users` SET name = %s WHERE ident = '%s';", (value, user.ident))
+    pass
 
 
 
@@ -194,7 +253,10 @@ async def main(websocket, path):
             
             elif data["action"] == "user":
                 if data["subact"] == "login":
-                    await user_login(conn, data["name"], data["pass"])
+                    await user_login(conn, data["name"], data["delta"], data["pass"])
+
+                elif data["subact"] == "signup":
+                    await user_reg(conn, data["name"], data["pass"])
 
                 elif data["subact"] == "update":
                     if conn.user.name == "Null":

@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>WebSocket demo</title>
+        <title>Messages</title>
         <style type="text/css">
             
             body {
                 background-color: lightseagreen;
+                /*#062544*/
             }
 
             #main {
@@ -167,7 +168,7 @@
                         //$("#chanlist").append();
 
                         for(i = 0; i < data.data.length; i++){
-                            $("#chanlist").append("<li> <button id='channel_ " + data.data[i].ident + "' onclick='changeChannel(" + data.data[i].ident + ")'>" + data.data[i].name + "</button> </li>");
+                            $("#chanlist").append("<li> <button id='channel_ " + data.data[i].ident + "' onclick='changeChannel(" + data.data[i].ident + ")'> #-" + data.data[i].name + "</button> </li>");
                         }
                         channels = data.data;
                         changeChannel(0);

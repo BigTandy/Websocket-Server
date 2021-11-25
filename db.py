@@ -1,5 +1,11 @@
+from asyncio.tasks import _register_task
 import mysql.connector
 import asyncio
+import sys
+sys.path.append('/home/pi/!Sec')
+from dbAuth.py import authCredent
+
+auths = authCredent()
 
 class dataBase:
 
@@ -8,7 +14,7 @@ class dataBase:
 
     
     def select(self, query, values) -> list:
-        db = mysql.connector.connect(user='python', password='', host='127.0.0.1', database='messages')
+        db = mysql.connector.connect(user=auths["user"], password=auths["password"], host=auths["host"], database=auths["database"])
         cursor = db.cursor(dictionary=True, buffered=True)
 
         cursor.execute(query, values) # %s for item to be replaced in querry
@@ -22,8 +28,8 @@ class dataBase:
         return rows
 
 
-    def insert(self, query, values):
-        db = mysql.connector.connect(user='python', password='', host='127.0.0.1', database='messages')
+    def execute(self, query, values):
+        db = mysql.connector.connect(user=auths["user"], password=auths["password"], host=auths["host"], database=auths["database"])
         cursor = db.cursor()
 
         cursor.execute(query, values) # %s for item to be replaced in querry
@@ -32,4 +38,32 @@ class dataBase:
         cursor.close()
         db.close()
 
+
+
+class userT:
+
+    def __init__(self) -> None:
+        self.db = dataBase()
+
+    def insert(self, name, delta, ident, passhash, salt):
+        self.db.execute("INSERT INTO `users`(`id`, `name`, `delta`, `ident`, `passwd`, `salt`, `token`) VALUES (NULL, %s, %s, %s, %s, %s, NULL);", (name, delta, ident, passhash, salt))
     
+    def selectNameDelta(self, name, delta):
+        row = self.db.select("SELECT * FROM `users` WHERE `name` = %s AND `delta` = %s;", (name, delta))
+        if not row:
+            return False
+        else:
+            return row
+    
+    def selectIdent(self, ident):
+        row = self.db.select("SELECT * FROM `users` WHERE `ident` = %s;", (ident))
+        if not row:
+            return False
+        else:
+            return row
+    
+    def selectAll(self):
+        return self.db.select("SELECT * FROM `users`")
+    
+    def update(self, ident):
+        self.db.select("")

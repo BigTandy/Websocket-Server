@@ -30,7 +30,7 @@ class usr:
     Usr class holds info about users who are actively connected
     """
 
-    def __init__(self, ident : str, name : str, delta : str):
+    def __init__(self, ident: str, name : str, delta : str):
         self.name = name
         self.ident = ident
         self.delta = delta
@@ -49,7 +49,7 @@ class usr:
 
 class channel:
 
-    def __init__(self, ident, name) -> None:
+    def __init__(self, ident: str, name) -> None:
         self.ident = ident
         self.name = name
         self.messages = []
@@ -58,7 +58,7 @@ class channel:
         """
         Message Container Class, Defines a message
         """
-        def __init__(self, author, message, ident, chan) -> None:
+        def __init__(self, author, message, ident: str, chan) -> None:
             self.content = message
             self.author = author #Pass whole User instence
             self.ident = ident

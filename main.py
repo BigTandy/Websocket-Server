@@ -34,7 +34,7 @@ CONNS = set()
 
 #setup defaults
 mainChannel = channel(0, "main")
-nullUser = usr(0, "Null", )
+nullUser = usr(0, "Null", "0000")
 
 
 CHANNELS.append(mainChannel)
@@ -188,6 +188,7 @@ async def user_login(conn, name, delta, pw):
 
             user = usr(rows[0]["ident"], rows[0]["name"])
             user.authToken = newAuth
+            await conn.send(json.dumps({"type": "login", "code": httpCode.OK, "token": newAuth}))
             conn.user = user
             USERS.add(user)
             await notify_users()
@@ -218,9 +219,13 @@ async def user_reg(conn, name, pw):
     hashed, salt = passHash(pw)
 
     userDC.insert(name, delta, ident, hashed, salt)
-    await user_login(conn, name, delta, pw)
-    
+    return True
+    #await user_login(conn, name, delta, pw)
 
+
+
+async def tokenLogin(conn, token):
+    pass
 
 
 def user_db_update(user, column, value):

@@ -84,6 +84,8 @@
 
             var websocket = new WebSocket("wss://lillplp.com:6789/");
 
+            let delta_f = document.getElementById("delta-in")
+
 
 
             
@@ -109,20 +111,16 @@
                 console.log(data)
 
                 switch (data.type) {
-                    case "mess_all":
+                    case "login":
                         //data.data
 
-                        break;
-                    case "users":
+                        if(data.code == 200){
+                            localStorage.setItem("authToken", data.token)
+                            $("#loginStat").html("--You Are Now Logged In--")
+                        }
 
                         break;
 
-                    case "mess":
-
-                        break;
-                    case "chan_burst":
-
-                        break;
                 }
 
             };
@@ -142,6 +140,7 @@
                     action: "user",
                     subact: "login",
                     name: name_field.value,
+                    delta: delta_f.value,
                     pass: pass_in.value
                 })
                 websocket.send(dat_tbs)

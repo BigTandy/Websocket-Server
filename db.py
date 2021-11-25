@@ -1,11 +1,14 @@
 from asyncio.tasks import _register_task
 import mysql.connector
 import asyncio
-import sys
-sys.path.append('/home/pi/!Sec')
-from dbAuth.py import authCredent
+import json
 
-auths = authCredent()
+with open("/home/pi/!Sec/dbAuth.json") as file:
+    data = file.read().replace('\n', '')
+
+auths = json.loads(data)
+
+
 
 class dataBase:
 

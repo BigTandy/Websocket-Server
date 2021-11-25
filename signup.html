@@ -58,8 +58,8 @@
             <div class="box" id="user_op">
 
 
-                <p id="you-name-cont">Name: <input id="name-in" type="text"> #<input id="delim-in" type="text"> </p>
-                <p>Pass: <input id="pass-in" type="password">  <button onclick="login()">Login</button> </p>
+                <p id="you-name-cont">Name: <input id="name-in" type="text"> </p>
+                <p>Pass: <input id="pass-in" type="password">  <button onclick="signup()">Sign Up</button> </p>
 
 
                 
@@ -137,10 +137,10 @@
             }
 
 
-            function login() {
+            function signup() {
                 let dat_tbs = JSON.stringify({
                     action: "user",
-                    subact: "login",
+                    subact: "signup",
                     name: name_field.value,
                     pass: pass_in.value
                 })

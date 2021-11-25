@@ -59,14 +59,14 @@ class userT:
             return row
     
     def selectIdent(self, ident):
-        row = self.db.select("SELECT * FROM `users` WHERE `ident` = %s;", (ident))
+        row = self.db.select("SELECT * FROM `users` WHERE `ident` = '%s';", (ident))
         if not row:
             return False
         else:
             return row
     
     def selectAll(self):
-        return self.db.select("SELECT * FROM `users`")
+        return self.db.select("SELECT * FROM `users`;", ())
     
     def update(self, ident):
         self.db.select("")

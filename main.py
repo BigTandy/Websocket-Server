@@ -76,7 +76,8 @@ def passHash(password, salt=None):
     if salt is None:
         salt = os.urandom(32)
 
-    hashed = hashlib.pbkdf2_hmac("sha256", password, salt, 100000)
+    hashed = hashlib.pbkdf2_hmac("sha256", password.encode('utf-8'), salt, 100000)
+    print(len(hashed))
     return (hashed, salt)
 
 
@@ -177,16 +178,18 @@ async def user_login(conn, name, delta, pw):
     rows = userDC.selectNameDelta(name, delta)
     print(rows)
     if rows:
+        rows = rows[0]
         if passVer(pw, rows["salt"], rows["passwd"]):
             while True:
                 newAuth = tokenGen()
-                rows = DataConn.select("SELECT * FROM mess_app.users WHERE token = %s;", (newAuth))
-                if rows:
+                CheckRows = DataConn.select("SELECT * FROM `mess_app`.`users` WHERE token = '%s';", (newAuth))
+                if CheckRows:
                     continue
                 else:
                     break
-
-            user = usr(rows[0]["ident"], rows[0]["name"])
+            #print(rows)
+            assert rows is dict
+            user = usr(rows["ident"], rows["name"])
             user.authToken = newAuth
             await conn.send(json.dumps({"type": "login", "code": httpCode.OK, "token": newAuth}))
             conn.user = user
@@ -210,7 +213,7 @@ async def user_reg(conn, name, pw):
 
     while True:
         ident = rand_id()
-        rows = DataConn.select("SELECT * FROM `users` WHERE `ident` = %s;", (ident))
+        rows = DataConn.select("SELECT * FROM `users` WHERE `ident` = '%s';", (ident))
         if rows:
             continue
         else:
@@ -219,7 +222,8 @@ async def user_reg(conn, name, pw):
     hashed, salt = passHash(pw)
 
     userDC.insert(name, delta, ident, hashed, salt)
-    return True
+    await conn.send(json.dumps({"type": "signup", "code": httpCode.OK, "delta": delta, "username": name}))
+    return delta
     #await user_login(conn, name, delta, pw)
 
 
@@ -233,7 +237,8 @@ def user_db_update(user, column, value):
     pass
 
 
-
+async def errorSend(conn, errCode):
+    await conn.send((json.dumps({"type": "error", "code": errCode})))
 
 
 
@@ -252,6 +257,11 @@ async def main(websocket, path):
         async for message in websocket:
             data = json.loads(message)
 
+            temp_data = []
+            for arg in data.values():
+                temp_data.append(html.escape(arg))
+            data = dict(zip(data.keys(), temp_data))
+
 
             if data["action"] == "connect":
                 pass
@@ -262,6 +272,8 @@ async def main(websocket, path):
 
                 elif data["subact"] == "signup":
                     await user_reg(conn, data["name"], data["pass"])
+                    
+
 
                 elif data["subact"] == "update":
                     if conn.user.name == "Null":
@@ -290,6 +302,8 @@ async def main(websocket, path):
             
             elif data["action"] == "mess":
 
+                if len(html.escape(data["message"])) > 60000:
+                    await errorSend(conn, httpCode.NOT_ACCEPTABLE)
 
                 conn.view["channel"].message_push(conn.user, html.escape(data["message"]), rand_id())
                 RELAY.append(conn.view["channel"].messages[-1])
@@ -297,7 +311,7 @@ async def main(websocket, path):
 
                 await notify_state()
             else:
-                await conn.send(json.dumps({"type": "error", "code": httpCode.BAD_REQUEST}))
+                await errorSend(conn, httpCode.BAD_REQUEST)
                 #write error codes
 
                 #await websocket.send(json.dumps({"type": "error", "code": "001", "text": "action not defined"}))

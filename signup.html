@@ -63,7 +63,8 @@
 
 
                 
-                <h3 id="loginStat"> --Not Logged In-- </h3>
+                <h3 id="signupStat"> --=-- </h3>
+                <h2 id="info"></h2>
                 <h3 id="connStat"> --Not Connected-- </h3>
             </div>
 
@@ -111,20 +112,21 @@
                 console.log(data)
 
                 switch (data.type) {
-                    case "mess_all":
-                        //data.data
+                    case "signup":
+                        
+                        if(data.code == 200){
+                            $("#signupStat").html("--Signup Successful!--")
+                            $("#info").html(`
+                            
+                            Your Username is <span id="username" class="blockinfo"> ${data.username}#<b>${data.delta}</b> </span>
+                            <br> The number after the <i>#</i> Goes in the <i>Delta</i> Field in the login page
+                            <br> <a href="login.html">Login</a>                                                      
+
+                            `);
+                        }
 
                         break;
-                    case "users":
 
-                        break;
-
-                    case "mess":
-
-                        break;
-                    case "chan_burst":
-
-                        break;
                 }
 
             };

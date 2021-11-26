@@ -128,6 +128,31 @@
                 //websocket.send(JSON.stringify({action: "connect", name: name_field.value}));
                 connStat.style.color = "green";
                 connStat.textContent = "--Connected--";
+
+
+                if(localStorage.getItem("token") !== null){
+
+
+                    websocket.send(JSON.stringify(
+                        {
+                            action: "user",
+                            subact: "tokenLogin",
+                            name: localStorage.getItem("name"),
+                            delta: localStorage.getItem("delta"),
+                            token: localStorage.getItem("token")
+                        }
+                    ))
+
+
+
+
+                }
+
+
+
+
+
+
             }
 
             websocket.onclose = function (event) {
@@ -177,6 +202,9 @@
                         //$("#chanlist").html(JSON.stringify(data.data));
                         
                         break;
+                    case "login":
+                        /*Put actuall token login success here*/
+                        break;
                 }
 
             };
@@ -219,17 +247,6 @@
                 websocket.send(JSON.stringify({action: "mess", message: text.value}));
                 text.value = "";
             }
-
-            function login() {
-                let dat_tbs = JSON.stringify({
-                    action: "user",
-                    subact: "login",
-                    name: name_field.value,
-                    pass: pass_in.value
-                })
-                websocket.send(dat_tbs)
-            }
-
 
             function updateName() {
                 websocket.send(JSON.stringify({action: "user", subact: "update", type: "name", data: name_field.value}))

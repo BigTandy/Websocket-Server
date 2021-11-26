@@ -68,5 +68,5 @@ class userT:
     def selectAll(self):
         return self.db.select("SELECT * FROM `users`;", ())
     
-    def update(self, ident):
-        self.db.select("")
+    def update(self, column, value, ident):
+        self.db.execute("UPDATE `users` SET `%s`='%s' WHERE `ident` = '%s'")

@@ -33,8 +33,8 @@ CONNS = set()
 
 
 #setup defaults
-mainChannel = channel(0, "main")
-nullUser = usr(0, "Null", "0000")
+mainChannel = channel("0", "main")
+nullUser = usr("0", "Null", "0000")
 
 
 CHANNELS.append(mainChannel)
@@ -182,16 +182,18 @@ async def user_login(conn, name, delta, pw):
         if passVer(pw, rows["salt"], rows["passwd"]):
             while True:
                 newAuth = tokenGen()
-                CheckRows = DataConn.select("SELECT * FROM `mess_app`.`users` WHERE token = '%s';", (newAuth))
+                CheckRows = DataConn.select("SELECT * FROM `mess_app`.`users` WHERE token = '%s' AND NOT name = '%s' AND NOT delta = '%s';", (newAuth, name, delta))
                 if CheckRows:
                     continue
                 else:
                     break
             #print(rows)
-            assert rows is dict
-            user = usr(rows["ident"], rows["name"])
+            user = usr(rows["ident"], rows["name"], rows["delta"])
             user.authToken = newAuth
-            await conn.send(json.dumps({"type": "login", "code": httpCode.OK, "token": newAuth}))
+
+            userDC.update("token", newAuth, rows["ident"])
+
+            await conn.send(json.dumps({"type": "login", "code": httpCode.OK, "token": newAuth, "name": rows["name"], "delta": rows["delta"]}))
             conn.user = user
             USERS.add(user)
             await notify_users()
@@ -228,8 +230,19 @@ async def user_reg(conn, name, pw):
 
 
 
-async def tokenLogin(conn, token):
-    pass
+async def tokenLogin(conn, name, delta, token):
+    rows = userDC.selectNameDelta(name, delta)
+    rows = rows[0]
+    if rows["token"] == token:
+            user = usr(rows["ident"], rows["name"], rows["delta"])
+
+            await conn.send(json.dumps({"type": "login", "code": httpCode.OK}))
+            conn.user = user
+            USERS.add(user)
+            await notify_users()
+            return user
+    else:
+        await conn.send(json.dumps({"type": "login", "code": httpCode.OK}))
 
 
 def user_db_update(user, column, value):
@@ -259,7 +272,10 @@ async def main(websocket, path):
 
             temp_data = []
             for arg in data.values():
-                temp_data.append(html.escape(arg))
+                if type(arg) == str:
+                    temp_data.append(html.escape(arg))
+                else:
+                    temp_data.append(arg)
             data = dict(zip(data.keys(), temp_data))
 
 
@@ -273,6 +289,8 @@ async def main(websocket, path):
                 elif data["subact"] == "signup":
                     await user_reg(conn, data["name"], data["pass"])
                     
+                elif data["subact"] == "tokenLogin":
+                    await tokenLogin(conn, data["name"], data["delta"], data["token"])
 
 
                 elif data["subact"] == "update":
@@ -287,14 +305,14 @@ async def main(websocket, path):
 
             elif data["action"] == "cViewChange":
                 try:
-                    temp_c_id_change = int(data["channel"])
+                    temp_c_id_change = data["channel"]
 
                     for Tchan in CHANNELS:
-                        if Tchan.ident == temp_c_id_change:
+                        if Tchan.ident == str(temp_c_id_change):
                             conn.view = {"channel": Tchan}
                             break
                     else:
-                        await conn.send(json.dumps({"type": "error", "code": httpCode.NOT_ACCEPTABLE}))
+                        await conn.send(json.dumps({"type": "error", "code": httpCode.NOT_FOUND}))
 
 
                 except ValueError as e:

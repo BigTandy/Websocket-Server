@@ -116,8 +116,11 @@
                         //data.data
 
                         if(data.code == 200){
+                            
                             localStorage.setItem("authToken", data.token)
-                            $("#loginStat").html("--You Are Now Logged In--")
+                            localStorage.setItem("username", data.name)
+                            localStorage.setItem("delta", data.delta)
+                            $("#loginStat").html("--You Are Now Logged In--<br><a href='index.html'>Home</a>")
                         }
 
                         break;

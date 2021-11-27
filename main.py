@@ -8,7 +8,7 @@ import logging
 import websockets
 import random as rand
 from http import HTTPStatus as httpCode
-import jsonpickle
+import jsonpickle 
 import ssl
 import pathlib
 import html
@@ -77,7 +77,7 @@ def passHash(password, salt=None):
         salt = os.urandom(32)
 
     hashed = hashlib.pbkdf2_hmac("sha256", password.encode('utf-8'), salt, 100000)
-    print(len(hashed))
+    #print(len(hashed))
     return (hashed, salt)
 
 
@@ -136,7 +136,7 @@ def whole_event():
 def users_event():
     #, "users": list(CONNS)
     if USERS:
-        print(jsonpickle.encode(list(USERS)[0]))
+        print(jsonpickle.encode(list(USERS)))
     return json.dumps({"type": "users", "uCount": len(USERS), "cCount": len(CONNS)})
 
 
@@ -182,7 +182,7 @@ async def user_login(conn, name, delta, pw):
         if passVer(pw, rows["salt"], rows["passwd"]):
             while True:
                 newAuth = tokenGen()
-                CheckRows = DataConn.select("SELECT * FROM `mess_app`.`users` WHERE token = '%s' AND NOT name = '%s' AND NOT delta = '%s';", (newAuth, name, delta))
+                CheckRows = DataConn.select("SELECT * FROM `mess_app`.`users` WHERE token = %s AND NOT name = %s AND NOT delta = %s;", (newAuth, name, delta))
                 if CheckRows:
                     continue
                 else:
@@ -191,7 +191,7 @@ async def user_login(conn, name, delta, pw):
             user = usr(rows["ident"], rows["name"], rows["delta"])
             user.authToken = newAuth
 
-            userDC.update("token", newAuth, rows["ident"])
+            userDC.updateToken(newAuth, rows["ident"])
 
             await conn.send(json.dumps({"type": "login", "code": httpCode.OK, "token": newAuth, "name": rows["name"], "delta": rows["delta"]}))
             conn.user = user
@@ -208,6 +208,10 @@ async def user_reg(conn, name, pw):
     #make ranadom delta, 4 chars
     #Salt / Hash
     #
+
+    if name.lower() == "null":
+        await conn.send(json.dumps({"type": "signup", "code": httpCode.NOT_ACCEPTABLE}))
+        return
 
     allRows = userDC.selectAll()
 
@@ -232,22 +236,21 @@ async def user_reg(conn, name, pw):
 
 async def tokenLogin(conn, name, delta, token):
     rows = userDC.selectNameDelta(name, delta)
-    rows = rows[0]
-    if rows["token"] == token:
-            user = usr(rows["ident"], rows["name"], rows["delta"])
+    if rows:
+        rows = rows[0]
+        if rows["token"] == token:
+                user = usr(rows["ident"], rows["name"], rows["delta"])
 
-            await conn.send(json.dumps({"type": "login", "code": httpCode.OK}))
-            conn.user = user
-            USERS.add(user)
-            await notify_users()
-            return user
+                await conn.send(json.dumps({"type": "login", "code": httpCode.OK}))
+                conn.user = user
+                USERS.add(user)
+                await notify_users()
+                return user
+        else:
+            print(rows, " token ", token, " name ", name, " delta ", delta)
+            await conn.send(json.dumps({"type": "login", "code": httpCode.UNAUTHORIZED}))
     else:
-        await conn.send(json.dumps({"type": "login", "code": httpCode.OK}))
-
-
-def user_db_update(user, column, value):
-    #rows = DataConn.update("UPDATE `users` SET name = %s WHERE ident = '%s';", (value, user.ident))
-    pass
+        await conn.send(json.dumps({"type": "login", "code": httpCode.UNAUTHORIZED, "namedelta": name + delta, "token": token}))
 
 
 async def errorSend(conn, errCode):
@@ -298,8 +301,9 @@ async def main(websocket, path):
                         continue
 
                     if data["type"] == "name":
-                        conn.user.name = data["data"]
-                        user_db_update(conn.user, "name", data["data"])
+                        pass
+                        #conn.user.name = data["data"]
+                        #user_db_update(conn.user, "name", data["data"])
                         #user.name(data["data"])
             
 
@@ -323,7 +327,7 @@ async def main(websocket, path):
                 if len(html.escape(data["message"])) > 60000:
                     await errorSend(conn, httpCode.NOT_ACCEPTABLE)
 
-                conn.view["channel"].message_push(conn.user, html.escape(data["message"]), rand_id())
+                conn.view["channel"].message_push(conn.user, data["message"], rand_id())
                 RELAY.append(conn.view["channel"].messages[-1])
 
 
@@ -339,7 +343,12 @@ async def main(websocket, path):
 
 
     finally:
+        if conn.user.name != "Null":
+            print("USER BEING REMOVED: ", conn.user.name, "#", conn.user.delta)
+            USERS.remove(conn.user)
+            
         await unregister(conn)
+        await notify_users()
 
 
 

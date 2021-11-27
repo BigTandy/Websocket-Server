@@ -5,6 +5,7 @@
         <style type="text/css">
             
             body {
+                height: 97vh;
                 background-color: lightseagreen;
                 /*#062544*/
             }
@@ -12,21 +13,25 @@
             #main {
                 display: grid;
 
-                grid-template-columns: repeat(5, 1fr);
-                grid-template-rows: repeat(5, 1fr);
+                grid-template-columns: 0.5fr repeat(4, 1fr) 0.5fr;
+                grid-template-rows: repeat(6, 1fr) min-content;
 
-                background-color: lightblue;
+                background-color: cadetblue;
 
-                height: 97vh;
+                height: 100%;
 
             }
             .box {
-                background-color: lightgreen;
+                background-color: cadetblue;
                 padding: 5px;
             }
             #messages_out {
-                grid-area: 2 / 1 / 5 / 1;
-                overflow-y: auto;
+                grid-area: 2 / 1 / -1 / -1;
+                height: 100%;
+                overflow-y: hidden;
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                grid-template-rows: repeat(5, 1fr);
             }
             #user_op {
                 background: lightsteelblue;
@@ -39,12 +44,38 @@
             }
 
             #messlist {
+                grid-area: 1 / 2 / -2 / -2;
+                margin-top: 0;
+                height: 100%;
+                background-color: lightgreen;
                 list-style-type: mess;
+
+                overflow-y: auto;
+                overflow-wrap: break-word;
                 
             }
+
+
             #connStat {
                 color: red;
             }
+            #youareOuter {
+                display: none;
+            }
+            #text-sub {
+                grid-area: -1 / 2 / -1 / -2;
+                width: 100%;
+            }
+            #moBox1 {
+                grid-area: 1 / 1 / 1 / 1;
+            }
+            #absoMess {
+                /*position: absolute;
+                right: 0;
+                top: 0;
+                height: 97vh;*/
+            }
+
 
         </style>
         <script
@@ -58,36 +89,53 @@
             
             <div class="box" id="user_op">
                 <button id="notif_perm" onclick="notifget()">Allow notifications?</button>
+                <h4 id="youareOuter">You are: <span id="youare"></span></h4>
                 <!--<div id="nameBox">-->
                     <br>
-                    <a href="login.html">Login</a>
+                    <a href="login.html">Login</a> <a href="signup.html">Sign Up</a> 
                     <br>
                 <!--</div>-->
-                <input type="text" id="text-sub"> <button onclick="submitText()">Submit</button>
+                <!--<input type="text" id="text-sub" > <button onclick="submitText()">Submit</button>-->
                 <p>Active Users: <span id="active_users"></span></p>
                 <p>Users Logged In: <span id="logged_users_c"></span></p>
                 <h3 id="connStat"> --Not Connected-- </h3>
             </div>
 
-            <!--<p id="messout"></p>-->
-            <div id="messages_out" class='box'>
+
+
+            <div id="moBox1">
                 <h1>Messages:</h1>
                 <h3 id="curr_view"></h3>
-                <ul id="messlist">
-
-                </ul>
             </div>
 
 
-            <div id="channels">
-                <ul id="chanlist">
 
-                </ul>
-            </div>
+
+            <ul id="chanlist">
+
+            </ul>
+
+
+
+            <ul id="messlist">
+
+            </ul>
+
+            <input type="text" id="text-sub" >
+            
+
+
+
+
+
+
+
+
 
 
 
         </div>
+        
 
 
         
@@ -130,16 +178,16 @@
                 connStat.textContent = "--Connected--";
 
 
-                if(localStorage.getItem("token") !== null){
+                if(localStorage.getItem("authToken") !== null){
 
 
                     websocket.send(JSON.stringify(
                         {
                             action: "user",
                             subact: "tokenLogin",
-                            name: localStorage.getItem("name"),
+                            name: localStorage.getItem("username"),
                             delta: localStorage.getItem("delta"),
-                            token: localStorage.getItem("token")
+                            token: localStorage.getItem("authToken")
                         }
                     ))
 
@@ -204,6 +252,12 @@
                         break;
                     case "login":
                         /*Put actuall token login success here*/
+
+                        if(data.code == 200){
+                            $("#youareOuter").css("display", "inline")
+                            $("#youare").html(localStorage.getItem("username") + "#" + localStorage.getItem("delta"))
+                        }
+
                         break;
                 }
 
@@ -218,7 +272,7 @@
                 let chName = channels.find(element => element.ident == channel_ident);
                 $("#curr_view").html(chName.name);
 
-
+                /*
                 let HTMLArr = [];
                 let chanMess = chName.messages
                 for(i = 0; i < chanMess.length; i++){
@@ -228,6 +282,14 @@
 
                 let newHTML = HTMLArr.join("");
                 $("#messlist").html(newHTML)
+                */
+
+                $("#messlist").html("")
+                let chanMess = chName.messages
+                for(i = 0; i < chanMess.length; i++){
+                    messPush(chanMess[i]);
+                }
+
                 
                 websocket.send(JSON.stringify({action: "cViewChange", channel: channel_ident}));
 
@@ -242,6 +304,14 @@
                 
             }
 
+            
+            text.onkeydown = function(e) {
+                //console.log(e)
+                if(e.key === "Enter"){
+                    submitText() 
+                }
+                
+            }
 
             function submitText() {
                 websocket.send(JSON.stringify({action: "mess", message: text.value}));
@@ -252,18 +322,27 @@
                 websocket.send(JSON.stringify({action: "user", subact: "update", type: "name", data: name_field.value}))
             }
 
+
+            function messPush(datum){
+                messlist.insertAdjacentHTML("beforeend", "<li>"  + datum.author.name + "#" + datum.author.delta + ": "  + datum.content + " </li>");
+                if(messlist.scrollTop == messlist.scrollTopMax){
+                    messlist.scrollTop = messlist.scrollHeight - messlist.clientHeight; //Scroll to bottom is thanks to here -> https://stackoverflow.com/a/40903808
+                }
+            }
+
             function messHandle(data) {
 		        let datum = data
 
                 channels.find(element => element.ident == datum.chan.ident).messages.push(datum);
 
                 if(view["channel_ident"] == datum.chan.ident){
-                    messlist.insertAdjacentHTML("beforeend", "<li>"  + datum.author.name + ": "  + datum.content + " </li>");
+                    //messlist.insertAdjacentHTML("beforeend", "<li>"  + datum.author.name +"#" + datum.author.delta + ": "  + datum.content + " </li>");
+                    messPush(datum);
                 }
                 
 
                 //changeChannel(view,channel_ident);
-                notifHandle(datum.content + " In " + datum.chan.name + " By " + datum.author.name);
+                notifHandle(datum.content + " In " + datum.chan.name + " By " + datum.author.name + "#" + datum.author.delta);
                 
                 
 		

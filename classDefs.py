@@ -31,10 +31,11 @@ class usr:
     """
 
     def __init__(self, ident: str, name : str, delta : str):
+        #DO NOT PUT ***ANY*** PRIVATE INFO HERE UNTIL WE OVERHAUL SENDING INFO TO CLIENTS
         self.name = name
         self.ident = ident
         self.delta = delta
-        self.authToken = None
+        #self.authToken = None
         self.perms = None
     
     def dbGet(self):

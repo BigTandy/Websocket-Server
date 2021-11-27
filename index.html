@@ -264,6 +264,11 @@
             };
 
 
+            window.onload = function onloaded(){
+                messlist.scrollTop = messlist.scrollHeight - messlist.clientHeight;
+            }
+
+
 
 
             function changeChannel(channel_ident) {
@@ -324,10 +329,14 @@
 
 
             function messPush(datum){
-                messlist.insertAdjacentHTML("beforeend", "<li>"  + datum.author.name + "#" + datum.author.delta + ": "  + datum.content + " </li>");
                 if(messlist.scrollTop == messlist.scrollTopMax){
+                    messlist.insertAdjacentHTML("beforeend", "<li>"  + datum.author.name + "#" + datum.author.delta + ": "  + datum.content + " </li>");
                     messlist.scrollTop = messlist.scrollHeight - messlist.clientHeight; //Scroll to bottom is thanks to here -> https://stackoverflow.com/a/40903808
+                } else {
+                    messlist.insertAdjacentHTML("beforeend", "<li>"  + datum.author.name + "#" + datum.author.delta + ": "  + datum.content + " </li>");
                 }
+                
+
             }
 
             function messHandle(data) {

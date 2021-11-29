@@ -15,6 +15,7 @@ import html
 import string
 import hashlib
 import os
+import datetime
 
 # Me libs
 import db
@@ -26,6 +27,7 @@ from classDefs import *
 
 RELAY = []
 
+GUILDS = []
 CHANNELS = []
 USERS = set()
 CONNS = set()
@@ -33,10 +35,16 @@ CONNS = set()
 
 
 #setup defaults
-mainChannel = channel("0", "main")
+
+sudoUsr = usr("-1", "su", "0000")
+
+mainGuild = guild("0", "main", sudoUsr)
+mainChannel = mainGuild.channel("0", "main")
+#mainChannel = channel("0", "main")
 nullUser = usr("0", "Null", "0000")
 
 
+GUILDS.append(mainGuild)
 CHANNELS.append(mainChannel)
 
 
@@ -89,8 +97,10 @@ def passVer(password, salt, oldhash):
         return False
 
 
-for x in range(10):
-    CHANNELS.append(channel(rand_id(), str(x)))
+
+
+#for x in range(10):
+#    CHANNELS.append(channel(rand_id(), str(x)))
 
 
 
@@ -137,7 +147,7 @@ def users_event():
     #, "users": list(CONNS)
     if USERS:
         print(jsonpickle.encode(list(USERS)))
-    return json.dumps({"type": "users", "uCount": len(USERS), "cCount": len(CONNS)})
+    return json.dumps({"type": "users", "uCount": len(USERS), "cCount": len(CONNS), "reged": json.loads(jsonpickle.encode(USERS, unpicklable=False))})
 
 
 def channel_event():
@@ -189,7 +199,8 @@ async def user_login(conn, name, delta, pw):
                     break
             #print(rows)
             user = usr(rows["ident"], rows["name"], rows["delta"])
-            user.authToken = newAuth
+            #DO NOT UNCOMMENT BELOW LINE, THAT LEAKS THE AUTH TOKEN TO EVERYONE
+            #user.authToken = newAuth
 
             userDC.updateToken(newAuth, rows["ident"])
 
@@ -199,8 +210,10 @@ async def user_login(conn, name, delta, pw):
             await notify_users()
             return user
         else:
+            await conn.send(json.dumps({"type": "signup", "code": httpCode.UNAUTHORIZED}))
             return False
     else:
+        await conn.send(json.dumps({"type": "signup", "code": httpCode.UNAUTHORIZED}))
         return False
 
 
@@ -208,6 +221,8 @@ async def user_reg(conn, name, pw):
     #make ranadom delta, 4 chars
     #Salt / Hash
     #
+
+    #syms = string.symbols
 
     if name.lower() == "null":
         await conn.send(json.dumps({"type": "signup", "code": httpCode.NOT_ACCEPTABLE}))
@@ -253,10 +268,10 @@ async def tokenLogin(conn, name, delta, token):
         await conn.send(json.dumps({"type": "login", "code": httpCode.UNAUTHORIZED, "namedelta": name + delta, "token": token}))
 
 
-async def errorSend(conn, errCode):
-    await conn.send((json.dumps({"type": "error", "code": errCode})))
+async def errorSend(conn, errCode, info=""):
+    await conn.send((json.dumps({"type": "error", "code": errCode, "info": info})))
 
-
+  
 
 async def main(websocket, path):
     # register(websocket) sends user_event() to websocket
@@ -270,6 +285,7 @@ async def main(websocket, path):
     try:
         #await websocket.send(whole_event())
         await websocket.send(channel_event())
+        await websocket.send(users_event())
         async for message in websocket:
             data = json.loads(message)
 
@@ -324,8 +340,9 @@ async def main(websocket, path):
             
             elif data["action"] == "mess":
 
-                if len(html.escape(data["message"])) > 60000:
-                    await errorSend(conn, httpCode.NOT_ACCEPTABLE)
+                if len(data["message"]) > 6000:
+                    await errorSend(conn, httpCode.NOT_ACCEPTABLE, "MessToLong")
+                    continue
 
                 conn.view["channel"].message_push(conn.user, data["message"], rand_id())
                 RELAY.append(conn.view["channel"].messages[-1])

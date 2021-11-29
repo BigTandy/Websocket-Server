@@ -20,7 +20,7 @@ class dataBase:
         db = mysql.connector.connect(user=auths["user"], password=auths["password"], host=auths["host"], database=auths["database"])
         cursor = db.cursor(dictionary=True, buffered=True)
 
-        cursor.execute(query, list(values)) # %s for item to be replaced in querry
+        cursor.execute(query, values) # %s for item to be replaced in querry
 
         rows = cursor.fetchall()
 
@@ -35,7 +35,7 @@ class dataBase:
         db = mysql.connector.connect(user=auths["user"], password=auths["password"], host=auths["host"], database=auths["database"])
         cursor = db.cursor()
 
-        cursor.execute(query, list(values)) # %s for item to be replaced in querry
+        cursor.execute(query, values) # %s for item to be replaced in querry
 
         db.commit()
         cursor.close()
@@ -59,7 +59,7 @@ class userT:
             return row
     
     def selectIdent(self, ident):
-        row = self.db.select("SELECT * FROM `users` WHERE `ident` = '%s';", (ident))
+        row = self.db.select("SELECT * FROM `users` WHERE `ident` = '%s'", ident)
         if not row:
             return False
         else:
@@ -68,6 +68,10 @@ class userT:
     def selectAll(self):
         return self.db.select("SELECT * FROM `users`;", ())
     
-    def updateToken(self, value, ident):
+    def updateToken(self, token, ident):
         # https://stackoverflow.com/questions/9394291/python-and-mysqldb-substitution-of-table-resulting-in-syntax-error/9394450#9394450
-        self.db.execute("UPDATE `users` SET `token`=%s WHERE `ident` = %s", (value, ident))
+        self.db.execute("UPDATE `users` SET `token`=%s WHERE `ident` = %s", (token, ident))
+        rows = self.selectIdent(ident)
+        if rows:
+            rows = rows[0]
+            assert rows["token"] == token

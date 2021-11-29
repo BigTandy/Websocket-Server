@@ -14,7 +14,7 @@
                 display: grid;
 
                 grid-template-columns: 0.5fr repeat(4, 1fr) 0.5fr;
-                grid-template-rows: repeat(6, 1fr) min-content;
+                grid-template-rows: repeat(6, 1fr) min-content+2px;
 
                 background-color: cadetblue;
 
@@ -52,6 +52,8 @@
 
                 overflow-y: auto;
                 overflow-wrap: break-word;
+
+                
                 
             }
 
@@ -62,10 +64,16 @@
             #youareOuter {
                 display: none;
             }
+
             #text-sub {
                 grid-area: -1 / 2 / -1 / -2;
-                width: 100%;
+                /*width: 100%;*/
+                padding-left: 10px;
+                border-bottom: solid darkblue;
+                outline: none;
+                
             }
+
             #moBox1 {
                 grid-area: 1 / 1 / 1 / 1;
             }
@@ -74,6 +82,24 @@
                 right: 0;
                 top: 0;
                 height: 97vh;*/
+            }
+            #notif_perm {
+                display: none;
+            }
+            .messageBody {
+                margin-top: 8px;
+                display: flex;
+                flex-direction: column;
+
+                border-left-style: solid;
+                border-left-color: green;
+                border-left-width: 2px;
+            }
+            .mbody {
+                margin: 0;
+            }
+            .innMessDiv {
+                margin-bottom: 5px;
             }
 
 
@@ -89,6 +115,7 @@
             
             <div class="box" id="user_op">
                 <button id="notif_perm" onclick="notifget()">Allow notifications?</button>
+                <br>
                 <h4 id="youareOuter">You are: <span id="youare"></span></h4>
                 <!--<div id="nameBox">-->
                     <br>
@@ -96,9 +123,15 @@
                     <br>
                 <!--</div>-->
                 <!--<input type="text" id="text-sub" > <button onclick="submitText()">Submit</button>-->
+
                 <p>Active Users: <span id="active_users"></span></p>
                 <p>Users Logged In: <span id="logged_users_c"></span></p>
+
                 <h3 id="connStat"> --Not Connected-- </h3>
+
+                <ul id="usersConned">
+                    
+                </ul>
             </div>
 
 
@@ -121,7 +154,7 @@
 
             </ul>
 
-            <input type="text" id="text-sub" >
+            <input type="text" id="text-sub" autofocus="true" />
             
 
 
@@ -170,7 +203,9 @@
                 Notification.requestPermission()                   
             }
 
-            
+            function scr() {
+
+            }
               
             websocket.onopen = function (event) {
                 //websocket.send(JSON.stringify({action: "connect", name: name_field.value}));
@@ -229,17 +264,37 @@
                     case "users":
                         active_users_p.innerHTML = data.cCount;
                         logged_in_users_p.innerHTML = data.uCount;
+
+                        $("#usersConned").html("")
+                        for(i = 0; i < data.reged.length; i++){
+                            $("#usersConned").append("<li>" + data.reged[i].name + "#" + data.reged[i].delta + "</li>");
+                        }
+
                         break;
 
                     case "mess":
-                        messHandle(data.data)
+                        //messHandle(data.data)
 
-                        //notifHandle("lillplp.com Message")
+                        /*Chrome Compatiblity :((*/
+
+                        /*
+                            Chrome can actually go away
+                            Garbage browser, it broke my autoscroll and is evil 
+                        
+                        */
+
+                        if(messlist.scrollHeight - Math.abs(messlist.scrollTop) === messlist.clientHeight){ //https://developer.mozilla.org/en-US/docs/Web/API/Element/scrollHeight#determine_if_an_element_has_been_totally_scrolled GOD SEND GOD SEND, THANK YOU MDN!
+                            messHandle(data.data)
+                            messlist.scrollTop = messlist.scrollHeight - messlist.clientHeight;
+                        } else {
+                            messHandle(data.data)
+                        }
+                        //messlist.scrollTop = messlist.scrollHeight - messlist.clientHeight;
+
 
                         break;
                     case "chan_burst":
 
-                        //$("#chanlist").append();
 
                         for(i = 0; i < data.data.length; i++){
                             $("#chanlist").append("<li> <button id='channel_ " + data.data[i].ident + "' onclick='changeChannel(" + data.data[i].ident + ")'> #-" + data.data[i].name + "</button> </li>");
@@ -247,7 +302,10 @@
                         channels = data.data;
                         changeChannel(0);
 
-                        //$("#chanlist").html(JSON.stringify(data.data));
+                        /*Chrome Compatiblity :((*/
+                        messlist.scrollTop = messlist.scrollHeight - messlist.clientHeight;
+
+
                         
                         break;
                     case "login":
@@ -266,6 +324,13 @@
 
             window.onload = function onloaded(){
                 messlist.scrollTop = messlist.scrollHeight - messlist.clientHeight;
+
+
+                
+                if (Notification.permission !== "granted") {
+                    $("#notif_perm").css("display", "inline")
+                }
+
             }
 
 
@@ -277,18 +342,6 @@
                 let chName = channels.find(element => element.ident == channel_ident);
                 $("#curr_view").html(chName.name);
 
-                /*
-                let HTMLArr = [];
-                let chanMess = chName.messages
-                for(i = 0; i < chanMess.length; i++){
-                    
-                    HTMLArr.push("<li>"  + chanMess[i].author.name + ": " + chanMess[i].content + " </li>");
-                }
-
-                let newHTML = HTMLArr.join("");
-                $("#messlist").html(newHTML)
-                */
-
                 $("#messlist").html("")
                 let chanMess = chName.messages
                 for(i = 0; i < chanMess.length; i++){
@@ -299,9 +352,6 @@
                 websocket.send(JSON.stringify({action: "cViewChange", channel: channel_ident}));
 
 
-
-                //channels.find(element => element.ident == 0)
-
             }
 
 
@@ -310,11 +360,15 @@
             }
 
             
+
+
+
             text.onkeydown = function(e) {
                 //console.log(e)
                 if(e.key === "Enter"){
-                    submitText() 
+                    submitText()
                 }
+                let charLeft = 6000 - text.length;
                 
             }
 
@@ -327,14 +381,33 @@
                 websocket.send(JSON.stringify({action: "user", subact: "update", type: "name", data: name_field.value}))
             }
 
-
+            
             function messPush(datum){
+
+                function messPushAct(datum){
+
+                    let datetime = new Date(datum.datetime)
+
+                    let messBody = `
+                    <div class="messageBody">
+                    <div class="innMessDiv">
+                        <h3 class="namedelta mbody">${datum.author.name + "#" + datum.author.delta}:</h3> <h6 class="datetime mbody">${datetime.toLocaleTimeString('en-US')}</h6>
+                    </div>
+                    
+                    <p class="messageContent mbody">${datum.content}</p>
+                    `;
+                    messlist.insertAdjacentHTML("beforeend", "<li>"  + messBody + " </li>");
+                }
+
+                messPushAct(datum);
+                /*
                 if(messlist.scrollTop == messlist.scrollTopMax){
-                    messlist.insertAdjacentHTML("beforeend", "<li>"  + datum.author.name + "#" + datum.author.delta + ": "  + datum.content + " </li>");
+                    messPushAct(datum);
                     messlist.scrollTop = messlist.scrollHeight - messlist.clientHeight; //Scroll to bottom is thanks to here -> https://stackoverflow.com/a/40903808
                 } else {
-                    messlist.insertAdjacentHTML("beforeend", "<li>"  + datum.author.name + "#" + datum.author.delta + ": "  + datum.content + " </li>");
-                }
+                    //messlist.insertAdjacentHTML("beforeend", "<li>"  + datum.author.name + "#" + datum.author.delta + ": "  + datum.content + " </li>");
+                    messPushAct(datum);
+                }*/
                 
 
             }
@@ -351,16 +424,27 @@
                 
 
                 //changeChannel(view,channel_ident);
-                notifHandle(datum.content + " In " + datum.chan.name + " By " + datum.author.name + "#" + datum.author.delta);
+                if(datum.chan.ident != view.channel_ident || document.hasFocus() == false){
+                    //notifHandle(datum.content + " In " + datum.chan.name + " By " + datum.author.name + "#" + datum.author.delta);
+                    let cont = "If you see this, I (The programmer) messed up lmao"
+                    if(datum.content.length > 30){
+                        cont = datum.content.slice(0, 30) + "..."
+                    } else {
+                        cont = datum.content
+                    }
+                    notifHandle( datum.chan.name, datum.author.name + "#" + datum.author.delta + ": " + cont);
+                }
+                
                 
                 
 		
             }
 
-            function notifHandle(title) {
+            function notifHandle(title, bodyy) {
                 if (Notification.permission === "granted") {
                     //notif = new Notification("lillplp.com Message");
-                    notif = new Notification(title);
+                    //let title = "lillplp.com"
+                    notif = new Notification(title, {body: bodyy});
                 }
             }
 

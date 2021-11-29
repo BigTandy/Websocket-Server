@@ -21,14 +21,16 @@ import datetime
 import db
 from classDefs import *
 
+
 # Core of this code is from the websockets docs
 # https://websockets.readthedocs.io/en/stable/
 
 
-RELAY = []
+#RELAY = []
+#CHANNELS = []
 
-GUILDS = []
-CHANNELS = []
+
+GUILDS = set()
 USERS = set()
 CONNS = set()
 
@@ -36,16 +38,19 @@ CONNS = set()
 
 #setup defaults
 
+#Admin Use//Not used by people, just internaly
 sudoUsr = usr("-1", "su", "0000")
 
 mainGuild = guild("0", "main", sudoUsr)
-mainChannel = mainGuild.channel("0", "main")
-#mainChannel = channel("0", "main")
+mainChannel = mainGuild.addChannel("0", "main")
+mainGuild.systemChannel = mainChannel
+
+#Anonymous user//Used by people who are not logged in
 nullUser = usr("0", "Null", "0000")
 
 
 GUILDS.append(mainGuild)
-CHANNELS.append(mainChannel)
+
 
 
 DataConn = db.dataBase()
@@ -107,56 +112,132 @@ def passVer(password, salt, oldhash):
 
 # Begin Active Funcs
 
-def state_event():
-    sub = RELAY[-1]
-    
-    temp = {
-                "messobj" : {
-                    "message" : sub.content,
-                    "message_id" : sub.ident,
-                    "auth_id" : sub.author.ident,
-                    "auth_name" : sub.author.name,
-                    "channel" : json.loads(jsonpickle.encode(sub.chan, unpicklable=False))
-                }
-    }
 
-    return json.dumps({"type": "mess", "data" : json.loads(jsonpickle.encode(sub, unpicklable=False)) })
-    #return json.dumps({"type": "mess", "data" : temp })
+#def state_event()
 
 
-def whole_event():
-    temp = []
 
-    for sub in RELAY:
-        temp.append(
-            {
-                "messobj" : {
-                    "message" : sub.content,
-                    "message_id" : sub.ident,
-                    "auth_id" : sub.author.ident,
-                    "auth_name" : sub.author.name,
-                    "channel" : json.loads(jsonpickle.encode(sub.chan, unpicklable=False))
-                }
-            }
-        )
-    
-    return json.dumps({"type": "mess_all", "data" : temp})
-    #return json.dumps({"type": "state", **STATE})
+
+#def state_event():
+#    #Redo This
+#    sub = RELAY[-1]
+#    
+#    temp = {
+#                "messobj" : {
+#                    "message" : sub.content,
+#                    "message_id" : sub.ident,
+#                    "auth_id" : sub.author.ident,
+#                    "auth_name" : sub.author.name,
+#                    "channel" : json.loads(jsonpickle.encode(sub.chan, unpicklable=False))
+#                }
+#    }
+#
+#    return json.dumps({"type": "mess", "data" : json.loads(jsonpickle.encode(sub, unpicklable=False)) })
+#    #return json.dumps({"type": "mess", "data" : temp })
+
+
+#def whole_event():
+#    temp = []
+#
+#    for sub in RELAY:
+#        temp.append(
+#            {
+#                "messobj" : {
+#                    "message" : sub.content,
+#                    "message_id" : sub.ident,
+#                    "auth_id" : sub.author.ident,
+#                    "auth_name" : sub.author.name,
+#                    "channel" : json.loads(jsonpickle.encode(sub.chan, unpicklable=False))
+#                }
+#            }
+#        )
+#    
+#    return json.dumps({"type": "mess_all", "data" : temp})
+#    #return json.dumps({"type": "state", **STATE})
 
 def users_event():
     #, "users": list(CONNS)
     if USERS:
         print(jsonpickle.encode(list(USERS)))
-    return json.dumps({"type": "users", "uCount": len(USERS), "cCount": len(CONNS), "reged": json.loads(jsonpickle.encode(USERS, unpicklable=False))})
 
-
-def channel_event():
+    userDump = []
     
-    #jsonpickle.encode(CHANNELS, unpicklable=False)
-    return json.dumps({"type": "chan_burst", "data": json.loads(jsonpickle.encode(CHANNELS, unpicklable=False)) })
+    for user in USERS:
+        userDump.append({
+            "name": user.name,
+            "delta": user.delta,
+            "ident": user.ident,
+            "status": user.status
+        })
 
 
+    return json.dumps({"type": "users", "uCount": len(USERS), "cCount": len(CONNS), "reged": userDump})
 
+
+#def channel_event():
+#    #jsonpickle.encode(CHANNELS, unpicklable=False)
+#    return json.dumps({"type": "chan_burst", "data": json.loads(jsonpickle.encode(CHANNELS, unpicklable=False)) })
+
+
+async def guildDump(conn):
+
+    if not conn.user:
+        #:(
+        return
+    
+    userGuilds = []
+    for guild in conn.user.guilds:
+        channs = []
+        for chan in guild.channels:
+            messes = []
+            for mess in chan.messages:
+                messes.append(
+                    {
+                        "author": {
+                            "name": mess.author.name,
+                            "delta": mess.author.delta,
+                            "ident": mess.author.ident
+                        },
+                        "content": mess.content,
+                        "ident": mess.ident,
+                        "chan": mess.chan,
+                        "datetime": mess.datetime
+                    })
+            channs.append(
+                {
+                    "ident": chan.ident,
+                    "name": chan.name,
+                    "guild_ident": chan.guild.ident,
+                    "messages": messes
+                })
+
+        users = []
+        for user in guild.users:
+            users.append({
+                "name": user.name,
+                "delta": user.delta,
+                "ident": user.ident
+            })
+
+        userGuilds.append({
+            "ident": guild.ident,
+            "name": guild.name,
+            "systemChannel": guild.systemChannel,
+            "owner": guild.owner,
+            "channels": channs,
+            "users": users
+        })
+    
+    return json.dumps(userGuilds)
+
+
+async def guildUpdate(datum, guild):
+    if guild.users:
+        for user in guild.users:
+            try:
+                user.send(datum)
+            except conn_obj.NoConnectionAttached:
+                user.notify(datum)
 
 async def update(datum):
     if CONNS:
@@ -164,10 +245,10 @@ async def update(datum):
             await conn.send(datum)
 
 
-async def notify_state():
-    if CONNS:  # asyncio.wait doesn't accept an empty list
-        message = state_event()
-        await update(message)
+#async def notify_state():
+#    if CONNS:  # asyncio.wait doesn't accept an empty list
+#        message = state_event()
+#        await update(message)
 
 async def notify_users():
     if CONNS:  # asyncio.wait doesn't accept an empty list
@@ -258,6 +339,7 @@ async def tokenLogin(conn, name, delta, token):
 
                 await conn.send(json.dumps({"type": "login", "code": httpCode.OK}))
                 conn.user = user
+                user.addConn(conn)
                 USERS.add(user)
                 await notify_users()
                 return user
@@ -273,19 +355,25 @@ async def errorSend(conn, errCode, info=""):
 
   
 
-async def main(websocket, path):
-    # register(websocket) sends user_event() to websocket
-    #user = usr(0)
-    #await register(user)
 
-    conn = conn_obj(websocket, nullUser, {"channel": mainChannel})
+
+
+async def main(websocket, path):
+
+
+    conn = conn_obj(websocket, nullUser, {"guild": mainGuild, "channel": mainChannel})
     await register(conn)
     
 
     try:
         #await websocket.send(whole_event())
-        await websocket.send(channel_event())
-        await websocket.send(users_event())
+        #await websocket.send(channel_event())
+
+        await conn.send(guildDump(conn))
+        
+
+        await conn.send(users_event())
+
         async for message in websocket:
             data = json.loads(message)
 
@@ -327,16 +415,26 @@ async def main(websocket, path):
                 try:
                     temp_c_id_change = data["channel"]
 
-                    for Tchan in CHANNELS:
-                        if Tchan.ident == str(temp_c_id_change):
-                            conn.view = {"channel": Tchan}
+                    # == SANITY CHECK IF CHANNEL VIEW IS IN THE CURRENT GUILD
+
+                    for chan in conn.view["guild"].channels:
+                        if chan.ident == str(temp_c_id_change):
+                            conn.view["channel"] = chan
                             break
                     else:
                         await conn.send(json.dumps({"type": "error", "code": httpCode.NOT_FOUND}))
 
+                    #for Tchan in CHANNELS:
+                    #    if Tchan.ident == str(temp_c_id_change):
+                    #        conn.view = {"channel": Tchan}
+                    #        break
+                    #else:
+                    #    await conn.send(json.dumps({"type": "error", "code": httpCode.NOT_FOUND}))
+
 
                 except ValueError as e:
                     await conn.send(json.dumps({"type": "error", "code": httpCode.BAD_REQUEST}))
+                    
             
             elif data["action"] == "mess":
 
@@ -344,8 +442,9 @@ async def main(websocket, path):
                     await errorSend(conn, httpCode.NOT_ACCEPTABLE, "MessToLong")
                     continue
 
-                conn.view["channel"].message_push(conn.user, data["message"], rand_id())
-                RELAY.append(conn.view["channel"].messages[-1])
+                mess = conn.view["channel"].message_push(conn.user, data["message"], rand_id())
+                await guildUpdate({"channel": conn.view["channel"], "message": mess})
+                #RELAY.append(conn.view["channel"].messages[-1])
 
 
                 await notify_state()
@@ -362,6 +461,7 @@ async def main(websocket, path):
     finally:
         if conn.user.name != "Null":
             print("USER BEING REMOVED: ", conn.user.name, "#", conn.user.delta)
+            conn.user.removeConn(conn)
             USERS.remove(conn.user)
             
         await unregister(conn)

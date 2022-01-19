@@ -1,7 +1,11 @@
 from asyncio.tasks import _register_task
+import copy
 import mysql.connector
 import asyncio
 import json
+import classDefs as cd
+
+
 
 with open("/home/pi/!Sec/dbAuth.json") as file:
     data = file.read().replace('\n', '')
@@ -12,12 +16,12 @@ auths = json.loads(data)
 
 class dataBase:
 
-    def __init__(self) -> None:
-        pass
+    def __init__(self, dbSelex) -> None:
+        self.dbSelex = dbSelex
 
     
     def select(self, query, values) -> list:
-        db = mysql.connector.connect(user=auths["user"], password=auths["password"], host=auths["host"], database=auths["database"])
+        db = mysql.connector.connect(user=auths["user"], password=auths["password"], host=auths["host"], database=self.dbSelex)
         cursor = db.cursor(dictionary=True, buffered=True)
 
         cursor.execute(query, values) # %s for item to be replaced in querry
@@ -43,10 +47,72 @@ class dataBase:
 
 
 
+
+class dbStruct:
+
+    def __init__(self) -> None:
+        self.mess_app = dataBase("mess_app")
+        self.mess_guilds = dataBase("mess_guilds") 
+        self.mess_chans = dataBase("mess_channs")
+    
+    
+    #-Redundent due to implimentation in main.py
+    #Build a "Guild" obj from DB
+    def guildConstructor(self, gIdent):
+        
+        #iterate over all channels and messages
+
+        print(gIdent)
+
+        guilds = self.mess_app.select("SELECT * FROM `guilds`", ())
+        print(guilds)
+
+        for g in guilds:
+            if g["ident"] == gIdent:
+                guildInfo = copy.deepcopy(g)
+                break
+            else:
+                continue
+        else:
+            return False
+        
+        print(guildInfo)
+
+        
+        from main import ALLUSERS
+
+        for user in ALLUSERS:
+            if guildInfo["owner_ident"] == user.ident:
+                owner = user
+                break
+            else:
+                continue
+
+
+        guild = cd.guild(guildInfo['ident'], guildInfo['name'], owner, )  
+
+        #WARN
+        # Use of F strings here could cause SQL Injection attacks, DO NOT allow data from client side in this function
+        chans = self.mess_guilds.select(f"SELECT * FROM `GUILD_{guildInfo['ident']}`", ())
+        print(chans)
+
+        for chan in chans:
+            cInfoDump = self.mess_chans.select(f"SELECT * FROM CHANNEL_{guildInfo['ident']}_{chan['ident']}")
+
+        
+
+        
+
+
+
+
+
+
+
 class userT:
 
     def __init__(self) -> None:
-        self.db = dataBase()
+        self.db = dataBase("mess_app")
 
     def insert(self, name, delta, ident, passhash, salt):
         self.db.execute("INSERT INTO `users`(`id`, `name`, `delta`, `ident`, `passwd`, `salt`, `token`) VALUES (NULL, %s, %s, %s, %s, %s, NULL);", (name, delta, ident, passhash, salt))
@@ -75,3 +141,4 @@ class userT:
         if rows:
             rows = rows[0]
             assert rows["token"] == token
+    

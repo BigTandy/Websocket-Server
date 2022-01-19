@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Messages</title>
+        <style type="text/css">
+            
+            body {
+                height: 97vh;
+                background-color: black;
+                /*#062544*/
+            }
+
+            #main {
+                display: grid;
+
+                /*grid-template-columns: 0.5fr repeat(4, 1fr) 0.5fr;*/
+                grid-template-columns: 0.7fr repeat(4, 1fr) 0.5fr;
+                grid-template-rows: repeat(6, 1fr) min-content+2px;
+
+                background-color: #0c0c42;
+
+                height: 100%;
+
+            }
+            .box {
+                background-color: cadetblue;
+                padding: 5px;
+            }
+            #messages_out {
+                grid-area: 2 / 1 / -1 / -1;
+                height: 100%;
+                overflow-y: hidden;
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                grid-template-rows: repeat(5, 1fr);
+            }
+            @counter-style mess {
+                system: cyclic;
+                symbols: "|";
+                suffix: " ";
+            }
+
+            #messlist {
+                grid-area: 1 / 2 / -2 / -2;
+                margin-top: 0;
+                height: 100%;
+                list-style-type: mess;
+
+                overflow-y: auto;
+                overflow-wrap: break-word;
+
+                background-color: #060621;
+                border-left-style: solid;
+                border-right-style: solid;
+                border-color: #260000;
+
+            }
+
+
+            #connStat {
+                color: red;
+            }
+            #youareOuter {
+                display: none;
+            }
+
+            #text-box {
+                grid-area: -1 / 2 / -1 / -2;       
+                display: grid;
+                grid-template-columns: .2fr 3fr .5fr;
+                grid-template-rows: 1fr;
+
+                background-color: #331a1a;
+
+                border-bottom: solid darkblue;
+
+            }
+
+            #text-sub {
+                
+                grid-column: 2;
+
+                /*width: 100%;*/
+                padding-left: 10px;
+                border: none;
+                
+                outline: none;
+
+                background-color: #331a1a;
+                color: white;
+                
+            }
+
+            #moBox1 {
+                grid-area: 1 / 1 / 1 / 1;
+            }
+            #absoMess {
+                /*position: absolute;
+                right: 0;
+                top: 0;
+                height: 97vh;*/
+            }
+            #notif_perm {
+                display: none;
+            }
+            .messageBody {
+                margin-top: 8px;
+                display: flex;
+                flex-direction: column;
+
+                border-left-style: solid;
+                border-left-color: green;
+                border-left-width: 2px;
+
+                /*Yea or Nea?*/
+                border-top-style: solid;
+                border-top-color: green;
+
+                padding-bottom: 4px;
+
+            }
+            .mbody {
+                margin: 0;
+            }
+            .innMessDiv {
+                margin-bottom: 5px;
+            }
+            #guildchan {
+                grid-area: 2 / 1 / -1 / 1;
+                /*background-color: green;*/
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                grid-template-rows: 1fr;
+                
+                overflow-y: auto;   
+            }
+            #menuBox {
+                position: absolute;
+                top: 0;
+
+                /*opacity: 50%;*/
+                background-color: gray;
+                height: 95vh;
+                width: 99vw;
+                visibility: hidden;
+
+                display: flex;
+                justify-content: center;
+                align-content: center;
+                
+            }
+            #menu {
+                grid-area: -1 / 1 / -1 / 1;
+            }
+            .mentioned {
+                /*https://pinetools.com/blend-colors*/
+                /*background-color: orange;*/
+                /*#2d0417*/
+                background-color: rgba(80, 80, 23, 0.5);
+                border-top-color: orange;
+                border-left-color: orange;
+            }
+            .mentEver {
+                /*blue violet*/
+                border-top-color: blueviolet;
+                border-left-color: blueviolet;
+            }
+            .queer {
+                /*filter: brightness(85%);*/
+                /*backdrop-filter*/
+                background: linear-gradient(#ff9aa2 0% 16.6%, #ffb7b2 16.6% 33.2%, #ffdac1 33.2% 49.8%, #e2f0cb 49.8% 66.4%, #b5ead7 66.4% 83%, #c7ceea 83% 100%);
+
+                backdrop-filter: brightness(50%);
+            }
+            #user_op {
+                background-color: #0c0c42;
+            }
+
+
+        </style>
+        <link rel="stylesheet" href="/index.css">
+        <script
+        src="https://code.jquery.com/jquery-3.6.0.min.js"
+        integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4="
+        crossorigin="anonymous"></script>
+    </head>
+    <body>
+
+        <div id="main">
+            
+            <div class="box" id="user_op">
+                <button id="notif_perm" onclick="notifget()">Allow notifications?</button>
+                <br>
+                <h4 id="youareOuter">You are: <span id="youare"></span></h4>
+                <!--<div id="nameBox">-->
+                    <br>
+                    <a href="login.html">Login</a> <a href="signup.html">Sign Up</a> <button id="devmode" onclick="devmodey()">Dev Mode</button>
+                    <br>
+                <!--</div>-->
+                <!--<input type="text" id="text-sub" > <button onclick="submitText()">Submit</button>-->
+
+                <p>Active Users: <span id="active_users"></span></p>
+                <p>Users Logged In: <span id="logged_users_c"></span></p>
+
+                <h3 id="connStat"> --Not Connected-- </h3>
+
+                <ul id="usersConned">
+                    
+                </ul>
+            </div>
+
+
+
+            <div id="moBox1">
+                <h1>Messages:</h1>
+                <h3 id="curr_view"></h3>
+            </div>
+
+
+
+            <div id="guildchan">
+
+                <ul id="guildlist">
+
+                </ul>
+
+                <ul id="chanlist">
+
+                </ul>
+
+
+            </div>
+
+
+
+            <ul id="messlist">
+
+            </ul>
+
+            
+            <button id="menu" onclick="menuBut()">Menu</button>
+            <div id="menuBox">
+                <p>:D</p>
+            </div>
+
+
+            <div id="text-box">
+                <input type="text" id="text-sub" autofocus="true" autocomplete="false" placeholder="Send Message" />
+            </div>
+            
+
+            <!--
+            <input type="file" id="fileUpload" />
+            <img id="bill" width="100%" height="100%" />
+            -->
+            
+
+
+
+
+
+
+
+
+
+
+
+        </div>
+        
+
+
+        
+
+        <script>
+            
+            let s_ow = 1;
+            function menuBut(){
+                if(s_ow > 0){
+                    menuHandle(true)
+                }else {
+                    menuHandle(false)
+                }
+                s_ow = s_ow * -1;
+            }
+
+
+            function menuHandle(show, path){
+                //Contaner for showing main box with possiblity of show diffrent menus within
+
+
+                if(show === true){
+                    $("#menuBox").css("visibility", "visible")
+                }else{
+                    $("#menuBox").css("visibility", "hidden")
+                }
+                
+                if(path !== undefined){
+
+                    $("#menuBox").load(`menus/${path}.html`, function( response, status, xhr ) {
+                    if ( status == "error" ) {
+                        console.error("Menu Retreve Failure")
+                        $("#menuBox").css("background", "red")
+                    }
+                });
+             }
+
+
+            }
+            
+
+
+            // Ess Vars
+            let view = {channel_ident: 0, guild_ident: 0};
+            let avalGuilds = [];
+            let userburst;
+            let devmode = 0;
+            let nameIdent = {};
+
+            //Consts
+            const pingable = ["everyone", "here"];
+
+
+            // Bulk Vars
+            let text = document.getElementById("text-sub");
+            let active_users_p = document.getElementById("active_users");
+            let logged_in_users_p = document.getElementById("logged_users_c")
+            let messlist = document.getElementById("messlist");
+            let name_field = document.getElementById("name-in");
+            let pass_in = document.getElementById("pass-in");
+            let connStat = document.getElementById("connStat");
+            let channlist = document.getElementById("channlist")
+            // Bulk Vars ^
+
+            
+
+            var websocket = new WebSocket("wss://lillplp.com:6789/");
+
+
+            function notifget() {
+                Notification.requestPermission()                   
+            }
+
+            let pog = true;
+            function devmodey() {
+
+                if(pog){
+                    menuHandle(true, "login")
+                    return
+                    //$("#menuBox").load("signup.html");
+                }
+
+
+                if(devmode == 0){
+                    $("#main").css("background", "lightgray")
+                    $("#messlist").css("background", "lightgray")
+                    devmode = 1;
+                } else if (devmode == 1){
+                    $("#main").css("background", "")
+                    $("#messlist").css("background", "")
+                    devmode = 0;
+                }
+            }
+              
+            websocket.onopen = function (event) {
+                //websocket.send(JSON.stringify({action: "connect", name: name_field.value}));
+                connStat.style.color = "green";
+                connStat.textContent = "--Connected--";
+
+
+                if(localStorage.getItem("authToken") !== null){
+
+
+                    websocket.send(JSON.stringify(
+                        {
+                            action: "user",
+                            subact: "tokenLogin",
+                            name: localStorage.getItem("username"),
+                            delta: localStorage.getItem("delta"),
+                            token: localStorage.getItem("authToken")
+                        }
+                    ))
+                } else {
+                    //Call GOTO Login
+                    //TODO
+                }
+
+            }
+
+            websocket.onclose = function (event) {
+                connStat.style.color = "red";
+                connStat.textContent = "--Not Connected--";
+            }
+
+            websocket.onerror = function (event) {
+                connStat.style.color = "orange";
+                connStat.textContent = "--Error--";
+            }
+            
+            websocket.onmessage = function (event) {
+                data = JSON.parse(event.data);
+                console.log(data)
+
+                //document.getElementById("messlist").insertAdjacentHTML("beforeend", "<li> " + value.message + " </li>");
+
+                switch (data.type) {
+                    case "users":
+                        active_users_p.innerHTML = data.cCount;
+                        logged_in_users_p.innerHTML = data.uCount;
+
+                        $("#usersConned").html("")
+                        for(i = 0; i < data.reged.length; i++){
+                            $("#usersConned").append("<li>" + data.reged[i].user.name + "#" + data.reged[i].user.delta + "</li>");
+                        }
+
+                        break;
+
+                    case "mess":
+
+                        if(messlist.scrollHeight - Math.abs(messlist.scrollTop) === messlist.clientHeight){ //https://developer.mozilla.org/en-US/docs/Web/API/Element/scrollHeight#determine_if_an_element_has_been_totally_scrolled GOD SEND GOD SEND, THANK YOU MDN!
+                            messHandle(data.data)
+                            messlist.scrollTop = messlist.scrollHeight - messlist.clientHeight;
+                        } else {
+                            messHandle(data.data)
+                        }
+
+
+                        break;
+                    case "userburst":
+
+                        console.warn("Userburst")
+                        userburst = data.data;
+                        messlist.innerHTML = JSON.stringify(data.data)
+
+                        avalGuilds = data.data.guilds
+
+                        for(i = 0; i < data.data.guilds.length; i++){
+                            $("#guildlist").append("<li> <button id='button_ " + data.data.guilds[i].ident + "' onclick='changeGuild(" + data.data.guilds[i].ident + ")'> &-" + data.data.guilds[i].name + "</button> </li>");
+                        }
+                        channels = data.data;
+                        changeChannel(0);
+
+                        messlist.scrollTop = messlist.scrollHeight - messlist.clientHeight;
+
+
+
+                        break;
+
+                    case "login":
+                        /*Put actuall token login success here*/
+
+                        if(data.code == 200){
+                            $("#youareOuter").css("display", "inline")
+                            $("#youare").html(data.nameIdent.name + "#" + data.nameIdent.delta)
+                            
+                            nameIdent = {
+                                safe: false,
+                                name: data.nameIdent.name,
+                                delta: data.nameIdent.delta,
+                                ident: data.nameIdent.ident
+                            }
+
+                            avalGuilds = data.guilds;
+
+                            /* GRAB GUILDS HERE */
+                        }
+
+                        break;
+                    
+                    
+                }
+
+            };
+
+
+            window.onload = function onloaded(){
+                messlist.scrollTop = messlist.scrollHeight - messlist.clientHeight;
+
+
+                
+                if (Notification.permission !== "granted") {
+                    $("#notif_perm").css("display", "inline")
+                }
+
+            }
+
+
+            function changeGuild(guild_ident) {
+                //channel_ident = channel_ident;
+                //view.channel_ident = channel_ident;
+                view.guild_ident = guild_ident
+                
+
+                /*console.log(
+                    "Here " + JSON.stringify(avalGuilds.find(element => element.ident == guild_ident))
+                    );*/
+                
+                let guild_found = avalGuilds.find(element => element.ident == guild_ident);
+                let chName = guild_found.channels.find(element => element.ident == guild_found.systemChannel)
+                let channel_ident = guild_found.systemChannel
+                view.channel_ident = channel_ident
+
+                //let chName = guild_found.channels.find(element => element.ident == channel_ident);
+
+                //console.log("Ratio " + channel_ident + " <- channel ident | Stuffs -> " + JSON.stringify(chName))
+
+                $("#curr_view").html(`${guild_found.name}-${chName.name}`);
+
+                $("#chanlist").html("")
+                for(i=0; i < guild_found.channels.length; i++){
+                    $("#chanlist").append("<li> <button id='button_ " + guild_found.channels[i].ident + "' onclick='changeChannel(" + guild_found.channels[i].ident + ")'> #-" + guild_found.channels[i].name + "</button> </li>");
+                }
+
+
+                $("#messlist").html("")
+                let chanMess = chName.messages
+                for(i = 0; i < chanMess.length; i++){
+                    messHandle(chanMess[i], true)
+                    //messPush(chanMess[i]);
+                }
+
+                
+                websocket.send(JSON.stringify({action: "ViewChange", guild: guild_ident, channel: channel_ident}));
+
+
+            }
+
+
+
+            function changeChannel(channel_ident) {
+                //channel_ident = channel_ident;
+                view.channel_ident = channel_ident;
+                //view.guild_ident = guild_ident
+
+                let guild_found = avalGuilds.find(element => element.ident == view.guild_ident);
+                let chName = guild_found.channels.find(element => element.ident == channel_ident)
+
+
+                $("#curr_view").html(`${guild_found.name}-${chName.name}`);
+
+                $("#chanlist").html("")
+                for(i=0; i < guild_found.channels.length; i++){
+                    $("#chanlist").append("<li> <button id='button_ " + guild_found.channels[i].ident + "' onclick='changeChannel(" + guild_found.channels[i].ident + ")'> #-" + guild_found.channels[i].name + "</button> </li>");
+                }
+
+                $("#messlist").html("")
+                let chanMess = chName.messages
+                for(i = 0; i < chanMess.length; i++){
+                    //switching to messHandle so mentions work
+
+                    //TODO
+                    //Make sure you dont get notified after seeing the mention 
+
+                    messHandle(chanMess[i], true)
+                    //messPush(chanMess[i]);
+                }
+
+                
+                websocket.send(JSON.stringify({action: "ViewChange", guild: view.guild_ident, channel: channel_ident}));
+
+
+            }
+        
+
+            //When "Enter" key is pressed while text box is active submit text
+            text.onkeydown = function(e) {
+                //console.log(e)
+                if(e.key === "Enter"){
+                    submitText()
+                }
+                let charLeft = 6000 - text.length;
+                
+            }
+
+
+
+            function submitText() {
+                websocket.send(JSON.stringify({action: "mess", message: text.value}));
+                text.value = "";
+            }
+
+
+
+            function updateName() {
+                websocket.send(JSON.stringify({action: "user", subact: "update", type: "name", data: name_field.value}))
+            }
+
+            
+
+
+            function messPush(datum, extras){
+                //TODO
+                // Add anchor for message links
+
+                //let linkRegex = /http(?:s?):\/\/(\w)+\.[a-z]{2,6}/g;
+
+                let datetime = new Date(datum.datetime)
+
+                let messBody = `
+                <div class="messageBody ${extras}" id="message_${datum.ident}">
+                    <div class="innMessDiv">
+                        <h3 class="namedelta mbody">${datum.author.name + "#" + datum.author.delta}:</h3> <h6 class="datetime mbody">${datetime.toLocaleTimeString('en-US')}</h6>
+                    </div>
+                
+                <p class="messageContent mbody">${datum.content}</p>
+                </div>
+                `;
+                messlist.insertAdjacentHTML("beforeend", "<li>"  + messBody + " </li>");
+
+            
+
+            }
+
+            function messHandle(datum, calledByLoopable = false) {
+
+
+                //TODO
+                // Enum-ish checking with SWITCH-CASE-BREAK
+                //
+
+
+                //flag to tell messPush if message is mentioned to color it
+                let extras = ""
+                
+                if(datum.mentions.includes(nameIdent.name.toLowerCase() + "#" + nameIdent.delta) ){
+                    extras = extras + " mentioned";
+
+                    if(view["channel_ident"] != datum.channel.ident){
+                        notifMess(datum)
+                    }
+                } else {
+                    //loop over "const pingable" to check if something else that should be treated as a ping here
+                    for(let i = 0; i < pingable.length; i++) {
+                        if(datum.mentions.includes(pingable[i].toLowerCase())){
+                            extras = extras + " mentioned mentEver";
+                            //Check to make sure to not send a notif out on currently viewed channel
+                            if(view["channel_ident"] != datum.channel.ident){
+                                notifMess(datum)
+                            }
+                            break;
+                        }
+                    }
+                }
+
+                if(extras.includes("mentioned")){
+                    console.log("Mentioned: " + extras + " Message: " + datum)
+                }
+
+
+
+                //TODO:
+                //Add notif settings
+                if(view["channel_ident"] == datum.channel.ident){
+
+                    messPush(datum, extras);
+                }
+
+
+                let guild_found = avalGuilds.find(element => element.ident == datum.guild.ident);
+                let channel_found = guild_found.channels.find(element => element.ident == datum.channel.ident)
+
+                if(calledByLoopable === false){
+                    channel_found.messages.push(datum)
+                }
+                
+
+
+                
+                notifMess(datum)               
+                
+                
+		
+            }
+
+            function notifMess(datum){
+
+                if(datum.channel.ident != view.channel_ident || document.hasFocus() == false){
+
+                    let cont = "If you see this, I (The programmer) messed up lmao"
+                    if(datum.content.length > 30){
+                        cont = datum.content.slice(0, 30) + "..."
+                    } else {
+                        cont = datum.content
+                    }
+                    notifHandle( datum.channel.name, datum.author.name + "#" + datum.author.delta + ": " + cont);
+                }
+
+            }
+
+            function notifHandle(title, bodyy) {
+                if (Notification.permission === "granted") {
+                    //notif = new Notification("lillplp.com Message");
+                    //let title = "lillplp.com"
+                    notif = new Notification(title, {body: bodyy});
+                }
+            }
+
+
+
+            
+
+        
+
+
+
+
+
+
+
+        </script>
+    </body>
+</html>

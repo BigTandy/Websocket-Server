@@ -55,49 +55,7 @@ class dbStruct:
         self.mess_guilds = dataBase("mess_guilds") 
         self.mess_chans = dataBase("mess_channs")
     
-    
-    #-Redundent due to implimentation in main.py
-    #Build a "Guild" obj from DB
-    def guildConstructor(self, gIdent):
-        
-        #iterate over all channels and messages
 
-        print(gIdent)
-
-        guilds = self.mess_app.select("SELECT * FROM `guilds`", ())
-        print(guilds)
-
-        for g in guilds:
-            if g["ident"] == gIdent:
-                guildInfo = copy.deepcopy(g)
-                break
-            else:
-                continue
-        else:
-            return False
-        
-        print(guildInfo)
-
-        
-        from main import ALLUSERS
-
-        for user in ALLUSERS:
-            if guildInfo["owner_ident"] == user.ident:
-                owner = user
-                break
-            else:
-                continue
-
-
-        guild = cd.guild(guildInfo['ident'], guildInfo['name'], owner, )  
-
-        #WARN
-        # Use of F strings here could cause SQL Injection attacks, DO NOT allow data from client side in this function
-        chans = self.mess_guilds.select(f"SELECT * FROM `GUILD_{guildInfo['ident']}`", ())
-        print(chans)
-
-        for chan in chans:
-            cInfoDump = self.mess_chans.select(f"SELECT * FROM CHANNEL_{guildInfo['ident']}_{chan['ident']}")
 
         
 

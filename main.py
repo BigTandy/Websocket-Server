@@ -5,6 +5,7 @@
 import asyncio
 import json
 import logging
+from pprint import pprint
 import websockets
 import random as rand
 from http import HTTPStatus as httpCode
@@ -20,7 +21,7 @@ import mysql.connector.errors as mysqlErrors
 # Me libs
 import db
 from classDefs import *
-
+from classDefs import guild as classGuild
 
 import jsonpickle
 
@@ -47,63 +48,90 @@ CONNS = set()
 ALLUSERS = set()
 
 
-
+#TODO
+#   Update ALLUSERS when new user is created, update user make script
 
 
 #Grab all users and make their respective obj's
-userstemp = DataConn.select("SELECT * FROM `users`", ())
-for oosr in userstemp:
-    print(f"{oosr['name']}#{oosr['delta']} ~~ {oosr['ident']}")
-    if oosr["guilds"] != None:
-        guilds = str(oosr["guilds"]).split(":")
-    else:
-        guilds = None
-
-    ALLUSERS.add(usr(oosr["ident"], oosr["name"], oosr["delta"], guilds=guilds))
 
 
+def buildGuilds():
+    """
+    Simple wrapper function for the guild building code to keep it from cluttering global namespace
+    """
+
+    userstemp = DataConn.select("SELECT * FROM `users`", ())
+    for oosr in userstemp:
+        print(f"{oosr['name']}#{oosr['delta']} ~~ {oosr['ident']}")
+        if oosr["guilds"] != None:
+            guilds = str(oosr["guilds"]).split(":")
+        else:
+            guilds = None
+
+        ALLUSERS.add(usr(oosr["ident"], oosr["name"], oosr["delta"], guilds=guilds))
+
+
+    #Grab all guilds
+    guildDump = DataConn.select("SELECT * FROM `guilds`", ())
+
+    for guildd in guildDump:
+
+        #Find the owner of the guild and store it in var to pass to guild constructer
+        owner = None
+        for oosr in ALLUSERS:
+            if oosr.ident == guildd['owner_ident']:
+                owner = oosr
+                break
+        else:
+            raise Exception(f"Guild Without Owner, {guildd}")
+
+
+        #WARN
+        #   DO NOT ADD USERS TO GUILD IN THIS FUNCTION, PERHAPS OFFLINE USERS WHEN I GET TO THAT, BUT DOING SO WILL CAUSE DUPLICATE ENTRIES 
+
+        #guildUsers = []
+        ##If there is a singular '*' in users column in DB that means add all users to guild
+        #if guildd['users'] == "*":
+        #    guildUsers = ALLUSERS
+
+        ##iterate over ALLUSERS and pick out the ones in this guild and add them to the guild
+        #guildusersIdents = guildd['users'].split(":")
+        #for oosr in ALLUSERS:
+        #    if oosr.ident in guildusersIdents:
+        #        guildUsers.append(oosr)
+
+        #WARN
+        #   DO NOT ADD USERS TO GUILD IN THIS FUNCTION, PERHAPS OFFLINE USERS WHEN I GET TO THAT, BUT DOING SO WILL CAUSE DUPLICATE ENTRIES 
+
+        #Creates GUILD Obj
+        thisGuild = guild(guildd['ident'], guildd['name'], owner)
+
+        try:
+            gChannels = dbS.mess_guilds.select(f"SELECT * FROM `GUILD_{guildd['ident']}`", ())
+        except mysqlErrors.ProgrammingError:
+            print(f"Guild {guildd} channels table not found")
+
+        print(gChannels)
+        #TODO Grab channels
+
+        #Builds all the channels
+        for chan in gChannels:
+            #TODO 
+            #   chanDump = dbS.mess_chans.select(f"SELECT * FROM CHANNEL_{guildd['ident']}_{chan['ident']}")
+
+            thisChan = channel(chan["channel_ident"], chan["name"], thisGuild)
+            thisGuild.addChannel(thisChan)
+            if chan["channel_ident"] == guildd["systemChannel_ident"]:
+                thisGuild.systemChannel = thisChan
+            
 
 
 
-#Grab all guilds
-guildDump = DataConn.select("SELECT * FROM `guilds`", ())
-
-for guildd in guildDump:
-
-    #Find the owner of the guild and store it in var to pass to guild constructer
-    owner = None
-    for oosr in ALLUSERS:
-        if oosr.ident == guildd['owner_ident']:
-            owner = oosr
-            break
-    else:
-        raise Exception(f"Guild Without Owner, {guildd}")
-
-
-    
-    guildUsers = []
-    #If there is a singular '*' in users column in DB that means add all users to guild
-    if guildd['users'] == "*":
-        guildUsers = ALLUSERS
-
-    #iterate over ALLUSERS and pick out the ones in this guild and add them to the guild
-    guildusersIdents = guildd['users'].split(":")
-    for oosr in ALLUSERS:
-        if oosr.ident in guildusersIdents:
-            guildUsers.append(oosr)
-
-    GUILDS.append(guild(guildd['ident'], guildd['name'], owner, users=None, aUsers=guildUsers))
-
-    try:
-        channels = dbS.mess_guilds.select(f"SELECT * FROM `GUILD_{guildd['ident']}`", ())
-    except mysqlErrors.ProgrammingError:
-        print(f"Guild {guildd} channels table not found")
-
-    print(channels)
+        GUILDS.append(thisGuild)
 
 
 
-
+buildGuilds()
 
 
 
@@ -139,7 +167,7 @@ mainGuild.addChannel(sChannel)
 GUILDS.append(mainGuild)
 #GUILDS.append(secGuild)
 
-
+pprint(GUILDS)
 
 
 #Following line is for testing, remove after needed
@@ -237,6 +265,9 @@ def users_event():
 async def errorSend(conn, errCode, info=""):
     await conn.send((json.dumps({"type": "error", "code": errCode, "info": info})))
 
+
+#TODO
+#   Annoncemnt
 
 
 
@@ -394,7 +425,8 @@ async def tokenLogin(conn, name, delta, token):
                 user.conn.add(conn)
 
                 #TODO
-                # Iterate over all of users' guilds and add them
+                #   Iterate over all of users' guilds and add them
+                
                 mainGuild.addUser(user)
 
                 #OOGA
@@ -402,6 +434,12 @@ async def tokenLogin(conn, name, delta, token):
 
                 #Grab all guild idents from DB and actually add the user to them, TODO, Wtf, Like add user to online users in guild now seems odd, ig TODO add offline users to guild, then online users when they come online then remove them when offline
                 for guild in user.guilds:
+                    
+                    if type(guild) == classGuild:
+                        print(f"USER: {user.name} GUILDS, GUILD: {guild.name}")
+                    else:
+                        print(f"USER: {user.name} GUILDS, GUILD: {guild}")
+
                     if type(guild) == str:
                         for listGuild in GUILDS:
                             if listGuild.ident == guild:
@@ -409,18 +447,16 @@ async def tokenLogin(conn, name, delta, token):
                                 user.guilds.remove(guild)
                                 break
                         else:
-                            raise Exception(f"Guild: <ident({guild})> Not found, tokenLogin near `for guild`")
+                            raise Exception(f"Guild: <ident({guild})> Not found, tokenLogin near `for guild`;\nDebug Info: {user.guilds}")
                     
 
 
-                print(user.guilds)
+                #print(user.guilds)
 
                 #Package all user data
-
-                #Honestly have little clue why this is here, does it send the user their guilds?, incomphrensible
                 meGuilds = []
                 for guild in user.guilds:
-                    print(guild)
+                    #print(guild)
 
                     oosers = []
                     for ooser in guild.users:
@@ -441,13 +477,23 @@ async def tokenLogin(conn, name, delta, token):
                             "messages": messages,
                             "guild_ident": chan.guild.ident,
                         })
+
+                    #sysSend = None
+
+                    if guild.systemChannel is None:
+                        #pprint(guild)
+                        #TODO Handle ListIndexOutOfRange
+                        sysSend = guild.channels[0]
+                    else:
+                        sysSend = guild.systemChannel.ident
+                        
                     meGuilds.append({
                         "ident": guild.ident,
                         "name": guild.name,
                         "owner": {"namedelta": {"name": guild.owner.name, "delta": guild.owner.delta}, "ident": guild.owner.ident},
                         "users": oosers,
                         "channels": channs,
-                        "systemChannel": guild.systemChannel.ident
+                        "systemChannel": sysSend
                     })
 
                 #send the data to user
@@ -544,7 +590,7 @@ async def messHandle(conn, data):
 
     print("MessHandle Called")
     
-
+    #TODO, Check if privalaged and allow longer messages
     if len(data["message"]) > 6000:
         await errorSend(conn, httpCode.NOT_ACCEPTABLE, "MessToLong")
         print("Mess to Long", jsonpickle.encode(data))
@@ -639,6 +685,12 @@ async def main(websocket, path):
 
     finally:
         if conn.user.name != "Null":
+
+            #TODO 
+            #   Auto remove people from guilds?
+
+            mainGuild.removeUser(conn.user)
+
             print("USER BEING REMOVED: ", conn.user.name, "#", conn.user.delta)
             conn.user.conn.remove(conn)
             USERS.remove(conn.user)

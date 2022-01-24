@@ -332,7 +332,10 @@
             // Bulk Vars ^
 
             
-
+            /*
+            TODO
+            Make on error reconnect
+            */
             var websocket = new WebSocket("wss://lillplp.com:6789/");
 
 
@@ -404,6 +407,8 @@
 
                 switch (data.type) {
                     case "users":
+
+                        //TODO, Consolodate these
                         active_users_p.innerHTML = data.cCount;
                         logged_in_users_p.innerHTML = data.uCount;
 

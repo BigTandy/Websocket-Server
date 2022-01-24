@@ -171,10 +171,13 @@ class guild:
 
 class channel:
 
-    def __init__(self, ident, name, guild: guild) -> None:
+    def __init__(self, ident, name, guild: guild, messages=None) -> None:
             self.ident = ident
             self.name = name
-            self.messages = []
+            #TODO
+            if messages is None:
+                self.messages = []
+
             self.guild = guild
     
 
